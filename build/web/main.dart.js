@@ -87477,7 +87477,7 @@ case 3:q=2
 h=p.pop()
 l=A.ag(h)
 k=A.ar(h)
-A.lN().$1("Erro session-check: "+A.k(l))
+A.lN().$1("[SESSION CHECK ERROR]: "+A.k(l))
 A.lN().$1(J.dL(k))
 o.ad(new A.amA(o))
 s=5
@@ -87506,7 +87506,7 @@ case 4:p=3
 e=o.pop()
 j=A.ag(e)
 i=A.ar(e)
-A.lN().$1("Erro fetchGames: "+A.k(j))
+A.lN().$1("[FETCH GAMES ERROR]: "+A.k(j))
 A.lN().$1(J.dL(i))
 n.ad(new A.amy(n))
 s=6
@@ -87536,7 +87536,7 @@ case 3:q=2
 g=p.pop()
 l=A.ag(g)
 k=A.ar(g)
-A.lN().$1("Erro reward-ad: "+A.k(l))
+A.lN().$1("[REWARD AD ERROR]: "+A.k(l))
 A.lN().$1(J.dL(k))
 o.ad(new A.amv(o))
 s=5
@@ -87561,7 +87561,7 @@ r=B.i.bE(o,60)
 o=B.c.oh(B.i.k(s),2,"0")+":"+B.c.oh(B.i.k(r),2,"0")}o=A.c([B.EZ,B.yy,A.eg(o,p,p,p,B.R2,p,p)],g)
 if(!q.r)B.b.S(o,A.c([B.Os,A.avH(!1,!0,A.hM(B.U6,B.x,p,new A.dw(A.aA(51,B.Y.C()>>>16&255,B.Y.C()>>>8&255,B.Y.C()&255),p,p,A.f6(8),p,p,B.aI),p,p,B.fP,p),p,!0,p,p,p,p,p,p,p,new A.amH(q,a),p,p,p,p,p,p)],g))
 o=A.ayC(A.c([A.hM(A.pY(o,B.aA,B.av,B.by,0),B.x,p,new A.dw(B.iW,p,m,j,p,p,B.aI),p,B.En,B.E9,p),new A.cP(B.Em,A.azA(B.F_,B.U7,new A.amI(q),A.azC(p,p,B.da,p,p,p,p,p,p,p,p,p,B.Ea,p,new A.cI(A.f6(14),B.q),p,p,p,p,p)),p)],g),B.cf,2,l)
-n=A.aA6(p,new A.ho(4,A.f6(12),B.A9),p,B.E8,p,p,p,p,!0,p,p,p,p,p,p,B.cf,!0,p,p,p,p,new A.ho(4,A.f6(12),B.lO),p,p,p,p,p,p,p,p,B.Qh,"Buscar Super Mario, Donkey Kong, Bomberman, RE, Zelda...",p,p,p,p,p,p,p,p,p,!0,!0,!1,p,B.EY,p,p,p,p,p,p,p,p,p,p,p,p)
+n=A.aA6(p,new A.ho(4,A.f6(12),B.A9),p,B.E8,p,p,p,p,!0,p,p,p,p,p,p,B.cf,!0,p,p,p,p,new A.ho(4,A.f6(12),B.lO),p,p,p,p,p,p,p,p,B.Qh,"Buscar Super Mario, Donkey Kong, RE, Zelda...",p,p,p,p,p,p,p,p,p,!0,!0,!1,p,B.EY,p,p,p,p,p,p,p,p,p,p,p,p)
 n=A.hM(A.rI(A.c([new A.C9(n,B.Pw,B.OC,B.OD,new A.amJ(q),!0,p),B.Ou,new A.Oa(B.as,A.pY(A.c([q.rv("ALL","Todos os Jogos"),q.rv("SNES","SNES"),q.rv("N64","Nintendo 64"),q.rv("PS1","PlayStation 1"),q.rv("PSP","PSP")],g),B.aA,B.av,B.by,0),p)],g),B.aA,B.av,B.by),B.x,B.iW,p,p,p,B.mQ,p)
 if(q.x)m=B.BJ
 else if(q.gD3().length===0)m=B.BI
@@ -87687,7 +87687,7 @@ aA(){var s,r,q,p,o=this
 o.aQ()
 o.d="emulatorjs-view-"+o.a.c+"-"+1000*Date.now()
 s="https://retroplay-backend-t5z1.onrender.com/api/proxy-rom?url="+A.Gn(2,o.a.r,B.W,!1)
-A.lN().$1("=== RETROPLAY EMULATOR ===")
+A.lN().$1("=== RETROPLAY EMULATOR LAUNCH ===")
 A.lN().$1("Game: "+o.a.d)
 A.lN().$1("Original ROM URL: "+o.a.r)
 A.lN().$1("Final Proxy URL: "+s)

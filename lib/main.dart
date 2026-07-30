@@ -274,7 +274,7 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
     } catch (e, stack) {
-      debugPrint('Erro session-check: $e');
+      debugPrint('[SESSION CHECK ERROR]: $e');
       debugPrint(stack.toString());
       setState(() => _isServerConnected = false);
     }
@@ -296,7 +296,7 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
     } catch (e, stack) {
-      debugPrint('Erro fetchGames: $e');
+      debugPrint('[FETCH GAMES ERROR]: $e');
       debugPrint(stack.toString());
       setState(() {
         _isLoadingGames = false;
@@ -324,7 +324,7 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
     } catch (e, stack) {
-      debugPrint('Erro reward-ad: $e');
+      debugPrint('[REWARD AD ERROR]: $e');
       debugPrint(stack.toString());
       setState(() => _freeTimeSeconds += 1200);
     }
@@ -469,7 +469,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 TextField(
                   onChanged: (val) => setState(() => _searchQuery = val),
                   decoration: InputDecoration(
-                    hintText: 'Buscar Super Mario, Donkey Kong, Bomberman, RE, Zelda...',
+                    hintText: 'Buscar Super Mario, Donkey Kong, RE, Zelda...',
                     hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
                     prefixIcon: const Icon(Icons.search, color: Color(0xFF00F0FF), size: 20),
                     filled: true,
@@ -733,13 +733,13 @@ class _RealEmulatorScreenState extends State<RealEmulatorScreen> {
   @override
   void initState() {
     super.initState();
-    // Previne o erro "ViewFactory already registered" com timestamp
+    // Previne o erro "ViewFactory already registered" gerando ID único com timestamp
     _viewId = 'emulatorjs-view-${widget.gameId}-${DateTime.now().microsecondsSinceEpoch}';
 
     final String encodedRomUrl = Uri.encodeComponent(widget.romUrl);
     final String finalRomUrl = '$kApiBaseUrl/proxy-rom?url=$encodedRomUrl';
 
-    debugPrint('=== RETROPLAY EMULATOR ===');
+    debugPrint('=== RETROPLAY EMULATOR LAUNCH ===');
     debugPrint('Game: ${widget.gameTitle}');
     debugPrint('Original ROM URL: ${widget.romUrl}');
     debugPrint('Final Proxy URL: $finalRomUrl');
