@@ -729,6 +729,11 @@ class _RealEmulatorScreenState extends State<RealEmulatorScreen> {
     super.initState();
     _viewId = 'emulatorjs-view-${widget.gameId}-${DateTime.now().millisecondsSinceEpoch}';
 
+    // Utiliza o proxy do servidor Node.js para liberar permissões CORS no navegador
+    final String finalRomUrl = widget.romUrl.startsWith('http')
+        ? '$kApiBaseUrl/proxy-rom?url=${Uri.encodeComponent(widget.romUrl)}'
+        : widget.romUrl;
+
     if (kIsWeb) {
       ui_web.platformViewRegistry.registerViewFactory(_viewId, (int viewId) {
         final iframe = html.IFrameElement()
@@ -756,7 +761,7 @@ class _RealEmulatorScreenState extends State<RealEmulatorScreen> {
                 EJS_color = '#00F0FF';
                 EJS_startOnLoaded = true;
                 EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
-                EJS_gameUrl = '${widget.romUrl}';
+                EJS_gameUrl = '$finalRomUrl';
               </script>
               <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
             </body>
