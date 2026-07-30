@@ -185,6 +185,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(width: 8),
                   _buildFilterChip('SNES', 'Super Nintendo', Icons.gamepad_rounded),
                   const SizedBox(width: 8),
+                  _buildFilterChip('NES', 'Nintendo (NES)', Icons.tv_rounded),
+                  const SizedBox(width: 8),
                   _buildFilterChip('MEGADRIVE', 'Mega Drive', Icons.disc_full_rounded),
                 ],
               ),
@@ -355,7 +357,7 @@ class _SingleEmulatorViewState extends State<SingleEmulatorView> {
     super.initState();
     _viewId = 'emulator-r2-${DateTime.now().microsecondsSinceEpoch}';
 
-    final String encodedRomUrl = Uri.encodeQueryComponent(widget.game.demoRomUrl);
+    final String encodedRomUrl = Uri.encodeComponent(widget.game.demoRomUrl);
     final String proxyUrl = '$kApiBaseUrl/proxy-rom?url=$encodedRomUrl';
 
     if (kIsWeb) {
