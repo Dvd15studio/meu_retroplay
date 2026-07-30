@@ -729,7 +729,8 @@ class _RealEmulatorScreenState extends State<RealEmulatorScreen> {
     super.initState();
     _viewId = 'emulatorjs-view-${widget.gameId}-${DateTime.now().millisecondsSinceEpoch}';
 
-    final String finalRomUrl = widget.romUrl;
+    final String encodedRomUrl = Uri.encodeComponent(widget.romUrl);
+    final String finalRomUrl = '$kApiBaseUrl/proxy-rom?url=$encodedRomUrl';
 
     if (kIsWeb) {
       final String htmlContent = '''
