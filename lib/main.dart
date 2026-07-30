@@ -117,14 +117,6 @@ class _HomeScreenState extends State<HomeScreen> {
           demoRomUrl: 'https://pub-9cc5ba1ca4464cfea78f3f53ccebd465.r2.dev/Super%20Mario%20World%20(U)%20%5B!%5D.smc',
           coverUrl: 'https://pub-9cc5ba1ca4464cfea78f3f53ccebd465.r2.dev/super-mario-world.jpg',
         ),
-        GameModel(
-          id: 'md-sonic-2',
-          title: 'Sonic The Hedgehog 2',
-          system: 'MEGADRIVE',
-          ejsCore: 'segaMD',
-          demoRomUrl: 'https://pub-9cc5ba1ca4464cfea78f3f53ccebd465.r2.dev/MEGADRIVE/Sonic%20The%20Hedgehog%202%20(W)%20(REV01)%20%5B!%5D.md',
-          coverUrl: 'https://pub-9cc5ba1ca4464cfea78f3f53ccebd465.r2.dev/MEGADRIVE/sonic-2.jpg',
-        ),
       ];
       _filteredGames = List.from(_allGames);
       _isLoading = false;
@@ -246,8 +238,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildGameCard(GameModel game) {
-    final String proxiedCoverUrl = '$kApiBaseUrl/proxy-image?url=${Uri.encodeComponent(game.coverUrl)}';
-
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF141024),
@@ -270,7 +260,7 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Positioned.fill(
                   child: Image.network(
-                    proxiedCoverUrl,
+                    game.coverUrl,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) => Container(
                       color: const Color(0xFF1F1A35),
@@ -365,7 +355,7 @@ class _SingleEmulatorViewState extends State<SingleEmulatorView> {
     super.initState();
     _viewId = 'emulator-r2-${DateTime.now().microsecondsSinceEpoch}';
 
-    final String encodedRomUrl = Uri.encodeComponent(widget.game.demoRomUrl);
+    final String encodedRomUrl = Uri.encodeQueryComponent(widget.game.demoRomUrl);
     final String proxyUrl = '$kApiBaseUrl/proxy-rom?url=$encodedRomUrl';
 
     if (kIsWeb) {
