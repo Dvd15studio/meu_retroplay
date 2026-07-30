@@ -397,22 +397,6 @@ class _SingleEmulatorViewState extends State<SingleEmulatorView> {
             EJS_startOnLoaded = true;
             EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
             EJS_gameUrl = '$proxyUrl';
-            EJS_defaultControls = {
-              0: {
-                0: 0, // D-Pad Up
-                1: 1, // D-Pad Down
-                2: 2, // D-Pad Left
-                3: 3, // D-Pad Right
-                4: 4, // Select
-                5: 5, // Start
-                6: 6, // Button B
-                7: 7, // Button A
-                8: 8, // Button Y
-                9: 9, // Button X
-                10: 10, // L1
-                11: 11  // R1
-              }
-            };
           </script>
           <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
         </body>
