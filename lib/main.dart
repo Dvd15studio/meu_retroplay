@@ -119,12 +119,12 @@ class _HomeScreenState extends State<HomeScreen> {
           coverUrl: 'https://pub-9cc5ba1ca4464cfea78f3f53ccebd465.r2.dev/SNES/CAPAS/25th%20Anniversary%20Super%20Mario%20Bros.%20(Europe)%20(Promo%2C%20Virtual%20Console).png',
         ),
         GameModel(
-          id: 'snes-mario-world',
-          title: 'Super Mario World',
-          system: 'SNES',
-          ejsCore: 'snes',
-          demoRomUrl: 'https://pub-9cc5ba1ca4464cfea78f3f53ccebd465.r2.dev/Super%20Mario%20World%20(U)%20%5B!%5D.smc',
-          coverUrl: 'https://pub-9cc5ba1ca4464cfea78f3f53ccebd465.r2.dev/super-mario-world.jpg',
+          id: 'md-aladdin',
+          title: 'Disney\'s Aladdin (Mega Drive)',
+          system: 'MEGADRIVE',
+          ejsCore: 'segaMD',
+          demoRomUrl: 'https://pub-9cc5ba1ca4464cfea78f3f53ccebd465.r2.dev/MEGA/ROMS/Aladdin%20(USA).md',
+          coverUrl: 'https://pub-9cc5ba1ca4464cfea78f3f53ccebd465.r2.dev/MEGA/CAPA/Aladdin.png',
         ),
       ];
       _filteredGames = List.from(_allGames);
@@ -192,8 +192,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   _buildFilterChip('ALL', 'Todos os Jogos', Icons.apps_rounded),
                   const SizedBox(width: 8),
-                  _buildFilterChip('SNES', 'Super Nintendo', Icons.gamepad_rounded),
-                  const SizedBox(width: 8),
                   _buildFilterChip('NES', 'Nintendo (NES)', Icons.tv_rounded),
                   const SizedBox(width: 8),
                   _buildFilterChip('MEGADRIVE', 'Mega Drive', Icons.disc_full_rounded),
@@ -249,7 +247,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildGameCard(GameModel game) {
-    // Passa a capa pelo proxy do backend para evitar qualquer bloqueio de CORS do navegador
+    // Passa a capa pelo proxy do backend para bypass de CORS
     final String proxiedCoverUrl = '$kApiBaseUrl/proxy-rom?url=${Uri.encodeComponent(game.coverUrl)}';
 
     return Container(
