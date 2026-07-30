@@ -109,7 +109,7 @@ class GameModel {
       isHeavy: json['isHeavy'] ?? false,
       badgeColor: getSystemColor(json['system'] ?? ''),
       ejsCore: json['ejsCore'] ?? getEjsCore(json['system'] ?? ''),
-      demoRomUrl: json['demoRomUrl'] ?? 'https://cdn.emulatorjs.org/stable/data/roms/snes/Super%20Mario%20World%20(USA).sfc',
+      demoRomUrl: json['demoRomUrl'] ?? 'https://archive.org/download/super-mario-world-usa/Super%20Mario%20World%20%28USA%29.sfc',
       coverUrl: json['coverUrl'] ?? 'https://images.igdb.com/igdb/image/upload/t_cover_big/co1x7d.jpg',
     );
   }
@@ -273,7 +273,9 @@ class _HomeScreenState extends State<HomeScreen> {
           _isServerConnected = true;
         });
       }
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('Erro session-check: $e');
+      debugPrint(stack.toString());
       setState(() => _isServerConnected = false);
     }
   }
@@ -293,7 +295,9 @@ class _HomeScreenState extends State<HomeScreen> {
           return;
         }
       }
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('Erro fetchGames: $e');
+      debugPrint(stack.toString());
       setState(() {
         _isLoadingGames = false;
         _isServerConnected = false;
@@ -319,7 +323,9 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }
       }
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('Erro reward-ad: $e');
+      debugPrint(stack.toString());
       setState(() => _freeTimeSeconds += 1200);
     }
   }
@@ -463,7 +469,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 TextField(
                   onChanged: (val) => setState(() => _searchQuery = val),
                   decoration: InputDecoration(
-                    hintText: 'Buscar Super Mario, Donkey Kong, Bomberman, RE, GTA, God of War...',
+                    hintText: 'Buscar Super Mario, Donkey Kong, Bomberman, RE, Zelda...',
                     hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
                     prefixIcon: const Icon(Icons.search, color: Color(0xFF00F0FF), size: 20),
                     filled: true,
@@ -727,12 +733,19 @@ class _RealEmulatorScreenState extends State<RealEmulatorScreen> {
   @override
   void initState() {
     super.initState();
-    _viewId = 'emulatorjs-view-${widget.gameId}-${DateTime.now().millisecondsSinceEpoch}';
+    // Previne o erro "ViewFactory already registered" com timestamp
+    _viewId = 'emulatorjs-view-${widget.gameId}-${DateTime.now().microsecondsSinceEpoch}';
 
     final String encodedRomUrl = Uri.encodeComponent(widget.romUrl);
     final String finalRomUrl = '$kApiBaseUrl/proxy-rom?url=$encodedRomUrl';
 
+    debugPrint('=== RETROPLAY EMULATOR ===');
+    debugPrint('Game: ${widget.gameTitle}');
+    debugPrint('Original ROM URL: ${widget.romUrl}');
+    debugPrint('Final Proxy URL: $finalRomUrl');
+
     if (kIsWeb) {
+      final String safeGameTitle = widget.gameTitle.replaceAll("'", "\\'");
       final String htmlContent = '''
         <!DOCTYPE html>
         <html>
@@ -749,7 +762,7 @@ class _RealEmulatorScreenState extends State<RealEmulatorScreen> {
           <script type="text/javascript">
             EJS_player = '#emulator';
             EJS_core = '${widget.ejsCore}';
-            EJS_gameName = '${widget.gameTitle.replaceAll("'", "\\'")}';
+            EJS_gameName = '$safeGameTitle';
             EJS_color = '#00F0FF';
             EJS_startOnLoaded = true;
             EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
