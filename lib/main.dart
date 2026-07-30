@@ -18,7 +18,7 @@ void main() {
   ]);
   runApp(const RetroPlayApp());
 }
-
+  
 class RetroPlayApp extends StatelessWidget {
   const RetroPlayApp({super.key});
 
@@ -109,6 +109,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
     setState(() {
       _allGames = const [
+        GameModel(
+          id: 'nes-mario-25th',
+          title: '25th Anniversary Super Mario Bros.',
+          system: 'NES',
+          ejsCore: 'nes',
+          demoRomUrl: 'https://pub-9cc5ba1ca4464cfea78f3f53ccebd465.r2.dev/SNES/ROMS/25th%20Anniversary%20Super%20Mario%20Bros.%20(Europe)%20(Promo%2C%20Virtual%20Console).nes',
+          coverUrl: 'https://pub-9cc5ba1ca4464cfea78f3f53ccebd465.r2.dev/SNES/CAPAS/25th%20Anniversary%20Super%20Mario%20Bros.%20(Europe)%20(Promo%2C%20Virtual%20Console).png',
+        ),
         GameModel(
           id: 'snes-mario-world',
           title: 'Super Mario World',
