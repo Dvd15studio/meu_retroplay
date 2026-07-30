@@ -107,7 +107,6 @@ class _HomeScreenState extends State<HomeScreen> {
       debugPrint('[FETCH CATALOG ERROR]: $e');
     }
 
-    // Fallback caso a API esteja indisponível
     setState(() {
       _allGames = const [
         GameModel(
@@ -247,8 +246,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildGameCard(GameModel game) {
-    // Passa a capa pelo proxy do backend para bypass de CORS
-    final String proxiedCoverUrl = '$kApiBaseUrl/proxy-rom?url=${Uri.encodeComponent(game.coverUrl)}';
+    final String proxiedCoverUrl = '$kApiBaseUrl/proxy-rom/cover.png?url=${Uri.encodeComponent(game.coverUrl)}';
 
     return Container(
       decoration: BoxDecoration(
@@ -367,8 +365,19 @@ class _SingleEmulatorViewState extends State<SingleEmulatorView> {
     super.initState();
     _viewId = 'emulator-r2-${DateTime.now().microsecondsSinceEpoch}';
 
-    final String encodedRomUrl = Uri.encodeComponent(widget.game.demoRomUrl);
-    final String proxyUrl = '$kApiBaseUrl/proxy-rom?url=$encodedRomUrl';
+    final String rawUrl = widget.game.demoRomUrl;
+    String extension = 'nes';
+    if (rawUrl.contains('.')) {
+      final String possibleExt = rawUrl.split('.').last.toLowerCase();
+      if (possibleExt.contains('?')) {
+        extension = possibleExt.split('?').first;
+      } else {
+        extension = possibleExt;
+      }
+    }
+
+    final String encodedRomUrl = Uri.encodeComponent(rawUrl);
+    final String proxyUrl = '$kApiBaseUrl/proxy-rom/game.$extension?url=$encodedRomUrl';
 
     if (kIsWeb) {
       final String htmlContent = '''
@@ -376,7 +385,7 @@ class _SingleEmulatorViewState extends State<SingleEmulatorView> {
         <html>
         <head>
           <meta charset="utf-8">
-          <style>body, html { margin:0; padding:0; width:100%; height:100%; background:#000; }</style>
+          <style>body, html { margin:0; padding:0; width:100%; height:100%; background:#000; overflow:hidden; }</style>
         </head>
         <body>
           <div id="emulator" style="width:100%;height:100%;"></div>
@@ -388,6 +397,22 @@ class _SingleEmulatorViewState extends State<SingleEmulatorView> {
             EJS_startOnLoaded = true;
             EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
             EJS_gameUrl = '$proxyUrl';
+            EJS_defaultControls = {
+              0: {
+                0: 0, // D-Pad Up
+                1: 1, // D-Pad Down
+                2: 2, // D-Pad Left
+                3: 3, // D-Pad Right
+                4: 4, // Select
+                5: 5, // Start
+                6: 6, // Button B
+                7: 7, // Button A
+                8: 8, // Button Y
+                9: 9, // Button X
+                10: 10, // L1
+                11: 11  // R1
+              }
+            };
           </script>
           <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
         </body>
