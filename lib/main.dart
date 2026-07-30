@@ -25,7 +25,7 @@ class RetroPlayApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'RetroPlay Teste',
+      title: 'RetroPlay Teste R2',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: const Color(0xFF0F0C1B),
@@ -59,8 +59,8 @@ class GameModel {
       title: json['title'] ?? 'Super Mario World',
       system: json['system'] ?? 'SNES',
       ejsCore: json['ejsCore'] ?? 'snes',
-      demoRomUrl: json['demoRomUrl'] ?? '',
-      coverUrl: json['coverUrl'] ?? 'https://images.igdb.com/igdb/image/upload/t_cover_big/co1x7d.jpg',
+      demoRomUrl: json['demoRomUrl'] ?? 'https://pub-9cc5ba1ca4464cfea78f3f53ccebd465.r2.dev/Super%20Mario%20World%20(U)%20%5B!%5D.smc',
+      coverUrl: json['coverUrl'] ?? 'https://pub-9cc5ba1ca4464cfea78f3f53ccebd465.r2.dev/super-mario-world.jpg',
     );
   }
 }
@@ -93,45 +93,78 @@ class _HomeScreenState extends State<HomeScreen> {
             _testGame = GameModel.fromJson(catalog.first);
             _isLoading = false;
           });
+          return;
         }
       }
     } catch (e) {
-      setState(() => _isLoading = false);
+      debugPrint('[FETCH GAME ERROR]: $e');
     }
+    
+    // Fallback local se o backend demorar para dar wake-up no Render
+    setState(() {
+      _testGame = const GameModel(
+        id: 'snes-mario-world',
+        title: 'Super Mario World',
+        system: 'SNES',
+        ejsCore: 'snes',
+        demoRomUrl: 'https://pub-9cc5ba1ca4464cfea78f3f53ccebd465.r2.dev/Super%20Mario%20World%20(U)%20%5B!%5D.smc',
+        coverUrl: 'https://pub-9cc5ba1ca4464cfea78f3f53ccebd465.r2.dev/super-mario-world.jpg',
+      );
+      _isLoading = false;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('RetroPlay - Teste Único de Emulação'),
+        title: const Text('RetroPlay - Teste Cloudflare R2 Próprio'),
         backgroundColor: const Color(0xFF141024),
       ),
       body: Center(
         child: _isLoading
             ? const CircularProgressIndicator(color: Color(0xFF00F0FF))
             : _testGame == null
-                ? const Text('Erro ao carregar jogo do servidor.')
+                ? const Text('Erro ao carregar jogo.')
                 : Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(12),
-                        child: Image.network(_testGame!.coverUrl, width: 150, height: 200, fit: BoxFit.cover),
+                        child: Image.network(
+                          _testGame!.coverUrl,
+                          width: 220,
+                          height: 150,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Container(
+                            width: 220,
+                            height: 150,
+                            color: const Color(0xFF141024),
+                            child: const Icon(Icons.gamepad, size: 64, color: Color(0xFF00F0FF)),
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 16),
                       Text(
                         _testGame!.title,
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 6),
+                      const Text(
+                        '☁️ Servidor R2 Próprio Activo (.smc + JPG)',
+                        style: TextStyle(color: Color(0xFF00F0FF), fontSize: 13, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 24),
                       ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF00F0FF),
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                         ),
-                        icon: const Icon(Icons.play_arrow, color: Colors.black),
-                        label: const Text('TESTAR AGORA', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                        icon: const Icon(Icons.play_arrow_rounded, color: Colors.black, size: 28),
+                        label: const Text(
+                          'JOGAR AGORA (R2)',
+                          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
                         onPressed: () {
                           Navigator.push(
                             context,
@@ -163,7 +196,7 @@ class _SingleEmulatorViewState extends State<SingleEmulatorView> {
   @override
   void initState() {
     super.initState();
-    _viewId = 'emulator-test-${DateTime.now().millisecondsSinceEpoch}';
+    _viewId = 'emulator-r2-${DateTime.now().microsecondsSinceEpoch}';
 
     final String encodedRomUrl = Uri.encodeComponent(widget.game.demoRomUrl);
     final String proxyUrl = '$kApiBaseUrl/proxy-rom?url=$encodedRomUrl';
