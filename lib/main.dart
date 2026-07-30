@@ -52,6 +52,7 @@ class GameModel {
   final Color badgeColor;
   final String ejsCore;
   final String demoRomUrl;
+  final String coverUrl;
 
   const GameModel({
     required this.id,
@@ -62,6 +63,7 @@ class GameModel {
     required this.badgeColor,
     required this.ejsCore,
     required this.demoRomUrl,
+    required this.coverUrl,
   });
 
   factory GameModel.fromJson(Map<String, dynamic> json) {
@@ -87,11 +89,11 @@ class GameModel {
         case 'SNES':
           return 'snes';
         case 'PS1':
-          return 'pcsx_rearmed';
+          return 'psx';
         case 'N64':
-          return 'mupen64plus';
+          return 'n64';
         case 'PSP':
-          return 'ppsspp';
+          return 'psp';
         case 'MEGADRIVE':
           return 'segaMD';
         default:
@@ -108,6 +110,7 @@ class GameModel {
       badgeColor: getSystemColor(json['system'] ?? ''),
       ejsCore: json['ejsCore'] ?? getEjsCore(json['system'] ?? ''),
       demoRomUrl: json['demoRomUrl'] ?? 'https://cdn.emulatorjs.org/stable/data/roms/snes/Super%20Mario%20World%20(USA).sfc',
+      coverUrl: json['coverUrl'] ?? 'https://images.igdb.com/igdb/image/upload/t_cover_big/co1x7d.jpg',
     );
   }
 }
@@ -460,7 +463,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 TextField(
                   onChanged: (val) => setState(() => _searchQuery = val),
                   decoration: InputDecoration(
-                    hintText: 'Buscar Super Mario, Donkey Kong, Bomberman, RE, GTA...',
+                    hintText: 'Buscar Super Mario, Donkey Kong, Bomberman, RE, GTA, God of War...',
                     hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
                     prefixIcon: const Icon(Icons.search, color: Color(0xFF00F0FF), size: 20),
                     filled: true,
@@ -504,8 +507,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     : GridView.builder(
                         padding: const EdgeInsets.all(12),
                         gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                          maxCrossAxisExtent: 220,
-                          childAspectRatio: 0.78,
+                          maxCrossAxisExtent: 210,
+                          childAspectRatio: 0.68,
                           crossAxisSpacing: 12,
                           mainAxisSpacing: 12,
                         ),
@@ -549,6 +552,13 @@ class _HomeScreenState extends State<HomeScreen> {
         color: const Color(0xFF141024),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFF231C3D)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.4),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -560,16 +570,37 @@ class _HomeScreenState extends State<HomeScreen> {
                 borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
               ),
               child: Stack(
-                alignment: Alignment.center,
+                fit: StackFit.expand,
                 children: [
-                  Icon(Icons.gamepad_rounded, size: 48, color: game.badgeColor.withOpacity(0.5)),
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+                    child: Image.network(
+                      game.coverUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Center(
+                        child: Icon(Icons.gamepad_rounded, size: 48, color: game.badgeColor.withOpacity(0.5)),
+                      ),
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Center(
+                          child: CircularProgressIndicator(
+                            value: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                                : null,
+                            color: game.badgeColor,
+                            strokeWidth: 2,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                   Positioned(
                     top: 6,
                     left: 6,
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.8),
+                        color: Colors.black.withOpacity(0.85),
                         borderRadius: BorderRadius.circular(6),
                         border: Border.all(color: game.badgeColor, width: 0.8),
                       ),
@@ -585,7 +616,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.7),
+                        color: Colors.black.withOpacity(0.85),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
@@ -599,7 +630,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -607,26 +638,27 @@ class _HomeScreenState extends State<HomeScreen> {
                   game.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.white),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.white),
                 ),
+                const SizedBox(height: 2),
                 Text(
                   'Core: ${game.ejsCore}',
-                  style: const TextStyle(fontSize: 10, color: Color(0xFFA09CB0)),
+                  style: const TextStyle(fontSize: 9, color: Color(0xFFA09CB0)),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF00F0FF).withOpacity(0.15),
                       side: const BorderSide(color: Color(0xFF00F0FF)),
-                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      padding: const EdgeInsets.symmetric(vertical: 4),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
-                    icon: const Icon(Icons.play_arrow_rounded, color: Color(0xFF00F0FF), size: 16),
+                    icon: const Icon(Icons.play_arrow_rounded, color: Color(0xFF00F0FF), size: 14),
                     label: const Text(
                       'JOGAR AGORA',
-                      style: TextStyle(color: Color(0xFF00F0FF), fontWeight: FontWeight.bold, fontSize: 10),
+                      style: TextStyle(color: Color(0xFF00F0FF), fontWeight: FontWeight.bold, fontSize: 9),
                     ),
                     onPressed: () => _startGameAndLaunch(context, game),
                   ),
@@ -703,12 +735,13 @@ class _RealEmulatorScreenState extends State<RealEmulatorScreen> {
           ..style.border = 'none'
           ..style.width = '100%'
           ..style.height = '100%'
-          ..setAttribute('allow', 'autoplay; gamepad; fullscreen')
+          ..setAttribute('allow', 'autoplay; gamepad; fullscreen; accelerometer; gyroscope')
           ..srcdoc = '''
             <!DOCTYPE html>
             <html>
             <head>
               <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
               <style>
                 body, html { margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:#000; }
                 #emulator { width:100%; height:100%; }
