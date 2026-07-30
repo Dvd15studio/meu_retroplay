@@ -729,44 +729,46 @@ class _RealEmulatorScreenState extends State<RealEmulatorScreen> {
     super.initState();
     _viewId = 'emulatorjs-view-${widget.gameId}-${DateTime.now().millisecondsSinceEpoch}';
 
-    // Utiliza o proxy do servidor Node.js para liberar permissões CORS no navegador
-    final String finalRomUrl = widget.romUrl.startsWith('http')
-        ? '$kApiBaseUrl/proxy-rom?url=${Uri.encodeComponent(widget.romUrl)}'
-        : widget.romUrl;
+    final String finalRomUrl = widget.romUrl;
 
     if (kIsWeb) {
+      final String htmlContent = '''
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+          <style>
+            body, html { margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:#000; }
+            #emulator { width:100%; height:100%; }
+          </style>
+        </head>
+        <body>
+          <div id="emulator"></div>
+          <script type="text/javascript">
+            EJS_player = '#emulator';
+            EJS_core = '${widget.ejsCore}';
+            EJS_gameName = '${widget.gameTitle.replaceAll("'", "\\'")}';
+            EJS_color = '#00F0FF';
+            EJS_startOnLoaded = true;
+            EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
+            EJS_gameUrl = '$finalRomUrl';
+          </script>
+          <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
+        </body>
+        </html>
+      ''';
+
+      final blob = html.Blob([htmlContent], 'text/html');
+      final blobUrl = html.Url.createObjectUrlFromBlob(blob);
+
       ui_web.platformViewRegistry.registerViewFactory(_viewId, (int viewId) {
         final iframe = html.IFrameElement()
           ..style.border = 'none'
           ..style.width = '100%'
           ..style.height = '100%'
           ..setAttribute('allow', 'autoplay; gamepad; fullscreen; accelerometer; gyroscope')
-          ..srcdoc = '''
-            <!DOCTYPE html>
-            <html>
-            <head>
-              <meta charset="utf-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-              <style>
-                body, html { margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:#000; }
-                #emulator { width:100%; height:100%; }
-              </style>
-            </head>
-            <body>
-              <div id="emulator"></div>
-              <script type="text/javascript">
-                EJS_player = '#emulator';
-                EJS_core = '${widget.ejsCore}';
-                EJS_gameName = '${widget.gameTitle.replaceAll("'", "\\'")}';
-                EJS_color = '#00F0FF';
-                EJS_startOnLoaded = true;
-                EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
-                EJS_gameUrl = '$finalRomUrl';
-              </script>
-              <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
-            </body>
-            </html>
-          ''';
+          ..src = blobUrl;
         return iframe;
       });
     }
