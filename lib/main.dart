@@ -18,7 +18,7 @@ void main() {
   ]);
   runApp(const RetroPlayApp());
 }
-  
+
 class RetroPlayApp extends StatelessWidget {
   const RetroPlayApp({super.key});
 
@@ -107,6 +107,7 @@ class _HomeScreenState extends State<HomeScreen> {
       debugPrint('[FETCH CATALOG ERROR]: $e');
     }
 
+    // Fallback caso a API esteja indisponível
     setState(() {
       _allGames = const [
         GameModel(
@@ -248,6 +249,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildGameCard(GameModel game) {
+    // Passa a capa pelo proxy do backend para evitar qualquer bloqueio de CORS do navegador
+    final String proxiedCoverUrl = '$kApiBaseUrl/proxy-rom?url=${Uri.encodeComponent(game.coverUrl)}';
+
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF141024),
@@ -270,7 +274,7 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Positioned.fill(
                   child: Image.network(
-                    game.coverUrl,
+                    proxiedCoverUrl,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) => Container(
                       color: const Color(0xFF1F1A35),
