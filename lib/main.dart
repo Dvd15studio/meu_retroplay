@@ -44,6 +44,7 @@ class RetroPlayApp extends StatelessWidget {
 class GameModel {
   final String id;
   final String title;
+  final String fullTitle;
   final String system;
   final String ejsCore;
   final String demoRomUrl;
@@ -52,6 +53,7 @@ class GameModel {
   const GameModel({
     required this.id,
     required this.title,
+    required this.fullTitle,
     required this.system,
     required this.ejsCore,
     required this.demoRomUrl,
@@ -62,6 +64,7 @@ class GameModel {
     return GameModel(
       id: json['id'] ?? '',
       title: json['title'] ?? 'Jogo Sem Título',
+      fullTitle: json['fullTitle'] ?? json['title'] ?? '',
       system: json['system'] ?? 'NES',
       ejsCore: json['ejsCore'] ?? 'nes',
       demoRomUrl: json['demoRomUrl'] ?? '',
@@ -113,6 +116,7 @@ class _HomeScreenState extends State<HomeScreen> {
         GameModel(
           id: 'nes-mario-25th',
           title: '25th Anniversary Super Mario Bros.',
+          fullTitle: '25th Anniversary Super Mario Bros. (Europe)',
           system: 'NES',
           ejsCore: 'nes',
           demoRomUrl: 'https://pub-9cc5ba1ca4464cfea78f3f53ccebd465.r2.dev/SNES/ROMS/25th%20Anniversary%20Super%20Mario%20Bros.%20(Europe)%20(Promo%2C%20Virtual%20Console).nes',
@@ -121,6 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
         GameModel(
           id: 'md-aladdin',
           title: 'Disney\'s Aladdin (Mega Drive)',
+          fullTitle: 'Aladdin (USA)',
           system: 'MEGADRIVE',
           ejsCore: 'segaMD',
           demoRomUrl: 'https://pub-9cc5ba1ca4464cfea78f3f53ccebd465.r2.dev/MEGA/ROMS/Aladdin%20(USA).md',
@@ -136,7 +141,9 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _filteredGames = _allGames.where((game) {
         final matchesSystem = _selectedSystem == 'ALL' || game.system == _selectedSystem;
-        final matchesSearch = _searchQuery.isEmpty || game.title.toLowerCase().contains(_searchQuery.toLowerCase());
+        final matchesSearch = _searchQuery.isEmpty || 
+            game.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+            game.fullTitle.toLowerCase().contains(_searchQuery.toLowerCase());
         return matchesSystem && matchesSearch;
       }).toList();
     });
@@ -195,7 +202,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 TextField(
                   style: const TextStyle(color: Colors.white, fontSize: 14),
                   decoration: InputDecoration(
-                    hintText: 'Buscar jogo por nome...',
+                    hintText: 'Buscar jogo por nome (ex: Mario, Sonic, Aladdin)...',
                     hintStyle: const TextStyle(color: Colors.white38),
                     prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF00F0FF)),
                     filled: true,
@@ -231,7 +238,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator(color: Color(0xFF00F0FF)))
                 : _filteredGames.isEmpty
-                    ? const Center(child: Text('Nenhum jogo encontrado.'))
+                    ? const Center(child: Text('Nenhum jogo encontrado.', style: TextStyle(color: Colors.white54)))
                     : Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: GridView.builder(
@@ -275,7 +282,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildGameCard(GameModel game) {
-    final String proxiedCoverUrl = '$kApiBaseUrl/proxy-rom/cover.png?url=${Uri.encodeComponent(game.coverUrl)}';
+    final String proxiedCoverUrl = game.coverUrl.isNotEmpty
+        ? '$kApiBaseUrl/proxy-rom/cover.png?url=${Uri.encodeComponent(game.coverUrl)}'
+        : '';
 
     return Container(
       decoration: BoxDecoration(
@@ -303,12 +312,21 @@ class _HomeScreenState extends State<HomeScreen> {
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) => Container(
                       color: const Color(0xFF1F1A35),
-                      child: const Column(
+                      child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.videogame_asset_rounded, size: 48, color: Color(0xFF00F0FF)),
-                          SizedBox(height: 6),
-                          Text('Capa do Jogo', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                          const Icon(Icons.videogame_asset_rounded, size: 44, color: Color(0xFF00F0FF)),
+                          const SizedBox(height: 6),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                            child: Text(
+                              game.title,
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -320,7 +338,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.8),
+                      color: Colors.black.withOpacity(0.85),
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(color: const Color(0xFF00F0FF).withOpacity(0.5)),
                     ),
@@ -342,7 +360,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   game.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white),
                 ),
                 const SizedBox(height: 8),
                 SizedBox(
@@ -395,7 +413,7 @@ class _SingleEmulatorViewState extends State<SingleEmulatorView> {
     _viewId = 'emulator-r2-${DateTime.now().microsecondsSinceEpoch}';
 
     final String rawUrl = widget.game.demoRomUrl;
-    String extension = 'nes';
+    String extension = widget.game.system == 'MEGADRIVE' ? 'md' : 'nes';
     if (rawUrl.contains('.')) {
       final String possibleExt = rawUrl.split('.').last.toLowerCase();
       if (possibleExt.contains('?')) {
