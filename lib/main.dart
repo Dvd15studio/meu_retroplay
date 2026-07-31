@@ -199,7 +199,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     hintStyle: const TextStyle(color: Colors.white38),
                     prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF00F0FF)),
                     filled: true,
-                    fillColor: const Color(0xFF0F0C1B),
+                    fillColor: const Color(0xFF0F0F1B),
                     contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -420,12 +420,12 @@ class _SingleEmulatorViewState extends State<SingleEmulatorView> {
           <div id="emulator" style="width:100%;height:100%;"></div>
           <script type="text/javascript">
             EJS_player = '#emulator';
-            EJS_core = '${widget.game.ejsCore}';
-            EJS_gameName = '${widget.game.title}';
+            EJS_core = ${jsonEncode(widget.game.ejsCore)};
+            EJS_gameName = ${jsonEncode(widget.game.title)};
             EJS_color = '#00F0FF';
             EJS_startOnLoaded = true;
             EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
-            EJS_gameUrl = '$proxyUrl';
+            EJS_gameUrl = ${jsonEncode(proxyUrl)};
           </script>
           <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
         </body>
