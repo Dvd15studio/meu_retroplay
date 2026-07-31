@@ -62,8 +62,8 @@ class GameModel {
     return GameModel(
       id: json['id'] ?? '',
       title: json['title'] ?? 'Jogo Sem Título',
-      system: json['system'] ?? 'SNES',
-      ejsCore: json['ejsCore'] ?? 'snes',
+      system: json['system'] ?? 'NES',
+      ejsCore: json['ejsCore'] ?? 'nes',
       demoRomUrl: json['demoRomUrl'] ?? '',
       coverUrl: json['coverUrl'] ?? '',
     );
@@ -81,6 +81,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<GameModel> _allGames = [];
   List<GameModel> _filteredGames = [];
   String _selectedSystem = 'ALL';
+  String _searchQuery = '';
   bool _isLoading = true;
 
   @override
@@ -98,7 +99,7 @@ class _HomeScreenState extends State<HomeScreen> {
         final parsedList = catalogRaw.map((e) => GameModel.fromJson(e)).toList();
         setState(() {
           _allGames = parsedList;
-          _filteredGames = parsedList;
+          _applyFilters();
           _isLoading = false;
         });
         return;
@@ -126,20 +127,24 @@ class _HomeScreenState extends State<HomeScreen> {
           coverUrl: 'https://pub-9cc5ba1ca4464cfea78f3f53ccebd465.r2.dev/MEGA/CAPA/Aladdin.png',
         ),
       ];
-      _filteredGames = List.from(_allGames);
+      _applyFilters();
       _isLoading = false;
     });
   }
 
-  void _filterSystem(String system) {
+  void _applyFilters() {
     setState(() {
-      _selectedSystem = system;
-      if (system == 'ALL') {
-        _filteredGames = List.from(_allGames);
-      } else {
-        _filteredGames = _allGames.where((game) => game.system == system).toList();
-      }
+      _filteredGames = _allGames.where((game) {
+        final matchesSystem = _selectedSystem == 'ALL' || game.system == _selectedSystem;
+        final matchesSearch = _searchQuery.isEmpty || game.title.toLowerCase().contains(_searchQuery.toLowerCase());
+        return matchesSystem && matchesSearch;
+      }).toList();
     });
+  }
+
+  void _filterSystem(String system) {
+    _selectedSystem = system;
+    _applyFilters();
   }
 
   @override
@@ -170,11 +175,11 @@ class _HomeScreenState extends State<HomeScreen> {
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: const Color(0xFF00F0FF).withOpacity(0.5)),
             ),
-            child: const Row(
+            child: Row(
               children: [
-                Icon(Icons.cloud_done_rounded, color: Color(0xFF00F0FF), size: 16),
-                SizedBox(width: 6),
-                Text('R2 Conectado', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                const Icon(Icons.cloud_done_rounded, color: Color(0xFF00F0FF), size: 16),
+                const SizedBox(width: 6),
+                Text('${_allGames.length} Jogos', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
               ],
             ),
           )
@@ -185,24 +190,48 @@ class _HomeScreenState extends State<HomeScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             color: const Color(0xFF141024),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _buildFilterChip('ALL', 'Todos os Jogos', Icons.apps_rounded),
-                  const SizedBox(width: 8),
-                  _buildFilterChip('NES', 'Nintendo (NES)', Icons.tv_rounded),
-                  const SizedBox(width: 8),
-                  _buildFilterChip('MEGADRIVE', 'Mega Drive', Icons.disc_full_rounded),
-                ],
-              ),
+            child: Column(
+              children: [
+                TextField(
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: 'Buscar jogo por nome...',
+                    hintStyle: const TextStyle(color: Colors.white38),
+                    prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF00F0FF)),
+                    filled: true,
+                    fillColor: const Color(0xFF0F0C1B),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  onChanged: (value) {
+                    _searchQuery = value;
+                    _applyFilters();
+                  },
+                ),
+                const SizedBox(height: 10),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildFilterChip('ALL', 'Todos os Jogos', Icons.apps_rounded),
+                      const SizedBox(width: 8),
+                      _buildFilterChip('NES', 'Nintendo (NES)', Icons.tv_rounded),
+                      const SizedBox(width: 8),
+                      _buildFilterChip('MEGADRIVE', 'Mega Drive', Icons.disc_full_rounded),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator(color: Color(0xFF00F0FF)))
                 : _filteredGames.isEmpty
-                    ? const Center(child: Text('Nenhum jogo encontrado nesta categoria.'))
+                    ? const Center(child: Text('Nenhum jogo encontrado.'))
                     : Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: GridView.builder(
