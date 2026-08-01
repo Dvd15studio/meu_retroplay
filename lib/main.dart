@@ -202,7 +202,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 TextField(
                   style: const TextStyle(color: Colors.white, fontSize: 14),
                   decoration: InputDecoration(
-                    hintText: 'Buscar jogo por nome (ex: Mario, Sonic, Tekken, Aladdin)...',
+                    hintText: 'Buscar jogo por nome (ex: Mario, Sonic, Tekken, Black)...',
                     hintStyle: const TextStyle(color: Colors.white38),
                     prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF00F0FF)),
                     filled: true,
@@ -462,6 +462,10 @@ class _SingleEmulatorViewState extends State<SingleEmulatorView> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.game.system == 'PS2') {
+      return _buildPS2NoticeScreen();
+    }
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -482,6 +486,98 @@ class _SingleEmulatorViewState extends State<SingleEmulatorView> {
                 style: TextStyle(color: Colors.white54),
               ),
             ),
+    );
+  }
+
+  Widget _buildPS2NoticeScreen() {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0F0C1B),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF141024),
+        title: Text(widget.game.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 500),
+          margin: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(28),
+          decoration: BoxDecoration(
+            color: const Color(0xFF141024),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: const Color(0xFFFF007F).withOpacity(0.6), width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFFF007F).withOpacity(0.15),
+                blurRadius: 20,
+                spreadRadius: 2,
+              )
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF007F).withOpacity(0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.videogame_asset_rounded, color: Color(0xFFFF007F), size: 48),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                widget.game.title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00F0FF).withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF00F0FF).withOpacity(0.4)),
+                ),
+                child: const Text(
+                  'PLAYSTATION 2 - REQUISITOS DE HARDWARE',
+                  style: TextStyle(color: Color(0xFF00F0FF), fontSize: 11, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'A emulação de PlayStation 2 exige processamento gráfico 3D avançado e suporte nativo ao sistema operacional.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'A versão Web executa perfeitamente NES, SNES, Mega Drive e PS1. Para jogos pesados de PS2, utilize o nosso aplicativo nativo Android (APK).',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white38, fontSize: 12, height: 1.5),
+              ),
+              const SizedBox(height: 28),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF00F0FF),
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                  label: const Text('VOLTAR AO CATÁLOGO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
