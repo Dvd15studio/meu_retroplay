@@ -119,12 +119,12 @@ class _HomeScreenState extends State<HomeScreen> {
           fullTitle: '25th Anniversary Super Mario Bros. (Europe)',
           system: 'NES',
           ejsCore: 'nes',
-          demoRomUrl: 'https://pub-9cc5ba1ca4464cfea78f3f53ccebd465.r2.dev/SNES/ROMS/25th%20Anniversary%20Super%20Mario%20Bros.%20(Europe)%20(Promo%2C%20Virtual%20Console).nes',
-          coverUrl: 'https://pub-9cc5ba1ca4464cfea78f3f53ccebd465.r2.dev/SNES/CAPAS/25th%20Anniversary%20Super%20Mario%20Bros.%20(Europe)%20(Promo%2C%20Virtual%20Console).png',
+          demoRomUrl: 'https://pub-9cc5ba1ca4464cfea78f3f53ccebd465.r2.dev/NES/ROMS/25th%20Anniversary%20Super%20Mario%20Bros.%20(Europe).nes',
+          coverUrl: 'https://pub-9cc5ba1ca4464cfea78f3f53ccebd465.r2.dev/NES/CAPAS/25th%20Anniversary%20Super%20Mario%20Bros.%20(Europe).png',
         ),
         GameModel(
           id: 'md-aladdin',
-          title: 'Disney\'s Aladdin (Mega Drive)',
+          title: 'Disney\'s Aladdin',
           fullTitle: 'Aladdin (USA)',
           system: 'MEGADRIVE',
           ejsCore: 'segaMD',
@@ -186,7 +186,7 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 const Icon(Icons.cloud_done_rounded, color: Color(0xFF00F0FF), size: 16),
                 const SizedBox(width: 6),
-                Text('${_allGames.length} Jogos', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                Text('${_filteredGames.length} Jogos', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
               ],
             ),
           )
@@ -202,11 +202,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 TextField(
                   style: const TextStyle(color: Colors.white, fontSize: 14),
                   decoration: InputDecoration(
-                    hintText: 'Buscar jogo por nome (ex: Mario, Sonic, Aladdin)...',
+                    hintText: 'Buscar jogo por nome (ex: Mario, Sonic, Tekken, Aladdin)...',
                     hintStyle: const TextStyle(color: Colors.white38),
                     prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF00F0FF)),
                     filled: true,
-                    fillColor: const Color(0xFF0F0F1B),
+                    fillColor: const Color(0xFF0F0C1B),
                     contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -227,7 +227,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(width: 8),
                       _buildFilterChip('NES', 'Nintendo (NES)', Icons.tv_rounded),
                       const SizedBox(width: 8),
+                      _buildFilterChip('SNES', 'Super Nintendo', Icons.gamepad_rounded),
+                      const SizedBox(width: 8),
                       _buildFilterChip('MEGADRIVE', 'Mega Drive', Icons.disc_full_rounded),
+                      const SizedBox(width: 8),
+                      _buildFilterChip('PS1', 'PlayStation 1', Icons.album_rounded),
+                      const SizedBox(width: 8),
+                      _buildFilterChip('PS2', 'PlayStation 2', Icons.videogame_asset_rounded),
                     ],
                   ),
                 ),
@@ -293,7 +299,7 @@ class _HomeScreenState extends State<HomeScreen> {
         border: Border.all(color: const Color(0xFF231C3D)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.4),
+            color: Colors.black.withOpacity(0.3),
             blurRadius: 8,
             offset: const Offset(0, 4),
           )
@@ -305,42 +311,24 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Expanded(
             child: Stack(
+              fit: StackFit.expand,
               children: [
-                Positioned.fill(
-                  child: Image.network(
-                    proxiedCoverUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      color: const Color(0xFF1F1A35),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.videogame_asset_rounded, size: 44, color: Color(0xFF00F0FF)),
-                          const SizedBox(height: 6),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                            child: Text(
-                              game.title,
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+                proxiedCoverUrl.isNotEmpty
+                    ? Image.network(
+                        proxiedCoverUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => _buildFallbackCardHeader(game),
+                      )
+                    : _buildFallbackCardHeader(game),
                 Positioned(
                   top: 8,
                   left: 8,
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.85),
+                      color: Colors.black87,
                       borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: const Color(0xFF00F0FF).withOpacity(0.5)),
+                      border: Border.all(color: const Color(0xFF00F0FF).withOpacity(0.6)),
                     ),
                     child: Text(
                       game.system,
@@ -362,20 +350,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF00F0FF),
+                      foregroundColor: Colors.black,
                       padding: const EdgeInsets.symmetric(vertical: 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
-                    icon: const Icon(Icons.play_arrow_rounded, color: Colors.black, size: 18),
-                    label: const Text(
-                      'JOGAR',
-                      style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 12),
-                    ),
+                    icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                    label: const Text('JOGAR', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                     onPressed: () {
                       Navigator.push(
                         context,
@@ -385,11 +371,33 @@ class _HomeScreenState extends State<HomeScreen> {
                       );
                     },
                   ),
-                ),
+                )
               ],
             ),
-          )
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildFallbackCardHeader(GameModel game) {
+    return Container(
+      color: const Color(0xFF1F1A35),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.sports_esports_rounded, color: Color(0xFF00F0FF), size: 38),
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: Text(
+                game.system,
+                style: const TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -410,56 +418,45 @@ class _SingleEmulatorViewState extends State<SingleEmulatorView> {
   @override
   void initState() {
     super.initState();
-    _viewId = 'emulator-r2-${DateTime.now().microsecondsSinceEpoch}';
+    _viewId = 'emulator-view-${DateTime.now().millisecondsSinceEpoch}';
 
-    final String rawUrl = widget.game.demoRomUrl;
-    String extension = widget.game.system == 'MEGADRIVE' ? 'md' : 'nes';
-    if (rawUrl.contains('.')) {
-      final String possibleExt = rawUrl.split('.').last.toLowerCase();
-      if (possibleExt.contains('?')) {
-        extension = possibleExt.split('?').first;
-      } else {
-        extension = possibleExt;
-      }
-    }
+    final String romProxyUrl = '$kApiBaseUrl/proxy-rom/game-rom?url=${Uri.encodeComponent(widget.game.demoRomUrl)}';
 
-    final String encodedRomUrl = Uri.encodeComponent(rawUrl);
-    final String proxyUrl = '$kApiBaseUrl/proxy-rom/game.$extension?url=$encodedRomUrl';
+    // Safe JSON encoding prevents JavaScript syntax errors for apostrophes, quotes, and special characters
+    final String htmlContent = '''
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; }
+        #game { width: 100%; height: 100%; }
+    </style>
+</head>
+<body>
+    <div id="game"></div>
+    <script type="text/javascript">
+        EJS_player = '#game';
+        EJS_core = ${jsonEncode(widget.game.ejsCore)};
+        EJS_gameName = ${jsonEncode(widget.game.title)};
+        EJS_gameUrl = ${jsonEncode(romProxyUrl)};
+        EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
+    </script>
+    <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
+</body>
+</html>
+''';
 
     if (kIsWeb) {
-      final String htmlContent = '''
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <style>body, html { margin:0; padding:0; width:100%; height:100%; background:#000; overflow:hidden; }</style>
-        </head>
-        <body>
-          <div id="emulator" style="width:100%;height:100%;"></div>
-          <script type="text/javascript">
-            EJS_player = '#emulator';
-            EJS_core = ${jsonEncode(widget.game.ejsCore)};
-            EJS_gameName = ${jsonEncode(widget.game.title)};
-            EJS_color = '#00F0FF';
-            EJS_startOnLoaded = true;
-            EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
-            EJS_gameUrl = ${jsonEncode(proxyUrl)};
-          </script>
-          <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
-        </body>
-        </html>
-      ''';
-
-      final blob = html.Blob([htmlContent], 'text/html');
-      final blobUrl = html.Url.createObjectUrlFromBlob(blob);
-
       ui_web.platformViewRegistry.registerViewFactory(_viewId, (int viewId) {
-        return html.IFrameElement()
-          ..style.border = 'none'
+        final iframe = html.IFrameElement()
           ..style.width = '100%'
           ..style.height = '100%'
-          ..setAttribute('allow', 'autoplay; gamepad; fullscreen')
-          ..src = blobUrl;
+          ..style.border = 'none'
+          ..allowFullscreen = true
+          ..srcdoc = htmlContent;
+        return iframe;
       });
     }
   }
@@ -469,10 +466,23 @@ class _SingleEmulatorViewState extends State<SingleEmulatorView> {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        title: Text(widget.game.title),
         backgroundColor: const Color(0xFF141024),
+        title: Text(widget.game.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.close_rounded, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
+          )
+        ],
       ),
-      body: HtmlElementView(viewType: _viewId),
+      body: kIsWeb
+          ? HtmlElementView(viewType: _viewId)
+          : const Center(
+              child: Text(
+                'Emulação Web disponível no navegador.',
+                style: TextStyle(color: Colors.white54),
+              ),
+            ),
     );
   }
 }
