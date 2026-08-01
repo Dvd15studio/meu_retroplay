@@ -420,11 +420,9 @@ class _SingleEmulatorViewState extends State<SingleEmulatorView> {
     super.initState();
     _viewId = 'emulator-view-${DateTime.now().millisecondsSinceEpoch}';
 
-    // PS2 is handled via dedicated notice UI below to avoid EmulatorJS CDN 404 core errors
-    if (widget.game.system != 'PS2') {
-      final String romProxyUrl = '$kApiBaseUrl/proxy-rom/game-rom?url=${Uri.encodeComponent(widget.game.demoRomUrl)}';
+    final String romProxyUrl = '$kApiBaseUrl/proxy-rom/game-rom?url=${Uri.encodeComponent(widget.game.demoRomUrl)}';
 
-      final String htmlContent = '''
+    final String htmlContent = '''
 <!DOCTYPE html>
 <html>
 <head>
@@ -449,17 +447,16 @@ class _SingleEmulatorViewState extends State<SingleEmulatorView> {
 </html>
 ''';
 
-      if (kIsWeb) {
-        ui_web.platformViewRegistry.registerViewFactory(_viewId, (int viewId) {
-          final iframe = html.IFrameElement()
-            ..style.width = '100%'
-            ..style.height = '100%'
-            ..style.border = 'none'
-            ..allowFullscreen = true
-            ..srcdoc = htmlContent;
-          return iframe;
-        });
-      }
+    if (kIsWeb) {
+      ui_web.platformViewRegistry.registerViewFactory(_viewId, (int viewId) {
+        final iframe = html.IFrameElement()
+          ..style.width = '100%'
+          ..style.height = '100%'
+          ..style.border = 'none'
+          ..allowFullscreen = true
+          ..srcdoc = htmlContent;
+        return iframe;
+      });
     }
   }
 
@@ -477,94 +474,14 @@ class _SingleEmulatorViewState extends State<SingleEmulatorView> {
           )
         ],
       ),
-      body: widget.game.system == 'PS2'
-          ? _buildPS2NoticeScreen()
-          : (kIsWeb
-              ? HtmlElementView(viewType: _viewId)
-              : const Center(
-                  child: Text(
-                    'Emulação Web disponível no navegador.',
-                    style: TextStyle(color: Colors.white54),
-                  ),
-                )),
-    );
-  }
-
-  Widget _buildPS2NoticeScreen() {
-    return Container(
-      padding: const EdgeInsets.all(24.0),
-      color: const Color(0xFF0F0C1B),
-      child: Center(
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 500),
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: const Color(0xFF141024),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFFF007F).withOpacity(0.6)),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFFFF007F).withOpacity(0.2),
-                blurRadius: 20,
-                spreadRadius: 2,
-              )
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFF007F).withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.videogame_asset_rounded, color: Color(0xFFFF007F), size: 48),
+      body: kIsWeb
+          ? HtmlElementView(viewType: _viewId)
+          : const Center(
+              child: Text(
+                'Emulação Web disponível no navegador.',
+                style: TextStyle(color: Colors.white54),
               ),
-              const SizedBox(height: 16),
-              Text(
-                widget.game.title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF00F0FF).withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFF00F0FF).withOpacity(0.5)),
-                ),
-                child: const Text(
-                  'PLAYSTATION 2 - REQUISITOS DE HARDWARE',
-                  style: TextStyle(color: Color(0xFF00F0FF), fontSize: 11, fontWeight: FontWeight.bold),
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'A emulação de PlayStation 2 exige processamento gráfico 3D avançado e alocação de memória RAM (>4GB em WebAssembly).\n\nPara executar este jogo no navegador de Smart TV ou celular sem travamentos, utilize o nosso aplicativo nativo ou cliente dedicado.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF00F0FF),
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  icon: const Icon(Icons.arrow_back_rounded, size: 18),
-                  label: const Text('VOLTAR AO CATÁLOGO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              )
-            ],
-          ),
-        ),
-      ),
+            ),
     );
   }
 }
