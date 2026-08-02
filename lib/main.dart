@@ -1,24 +1,27 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
-
+import 'package:webview_flutter/webview_flutter.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:android_intent_plus/android_intent.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Backend API Endpoint
 const String kApiBaseUrl = 'https://retroplay-backend-t5z1.onrender.com/api';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Set preferred orientations for retro gaming (landscape & portrait)
+
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
     DeviceOrientation.portraitUp,
   ]);
-  
+
   runApp(const RetroPlayApp());
 }
 
@@ -45,8 +48,7 @@ class RetroPlayApp extends StatelessWidget {
   }
 }
 
-
-/// Game Model representing catalog items from Cloudflare R2
+/// Game Model
 class GameModel {
   final String id;
   final String title;
@@ -79,7 +81,6 @@ class GameModel {
   }
 }
 
-
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -93,6 +94,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String _selectedSystem = 'ALL';
   String _searchQuery = '';
   bool _isLoading = true;
+  String _statusMessage = 'Conectando ao servidor Cloud R2...';
 
   @override
   void initState() {
@@ -100,29 +102,44 @@ class _HomeScreenState extends State<HomeScreen> {
     _fetchGamesCatalog();
   }
 
-  /// Fetches game list from Node.js Express backend API
-  Future<void> _fetchGamesCatalog() async {
-    try {
-      final response = await http.get(Uri.parse('$kApiBaseUrl/games'));
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final List catalogRaw = data['catalog'] ?? [];
-        final parsedList = catalogRaw.map((e) => GameModel.fromJson(e)).toList();
-        
-        if (mounted) {
-          setState(() {
-            _allGames = parsedList;
-            _applyFilters();
-            _isLoading = false;
-          });
+  Future<void> _fetchGamesCatalog({int retries = 3}) async {
+    setState(() {
+      _isLoading = true;
+      _statusMessage = 'Carregando acervo do servidor...';
+    });
+
+    for (int attempt = 1; attempt <= retries; attempt++) {
+      try {
+        final response = await http
+            .get(Uri.parse('$kApiBaseUrl/games'))
+            .timeout(const Duration(seconds: 15));
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          final List catalogRaw = data['catalog'] ?? [];
+          final parsedList = catalogRaw.map((e) => GameModel.fromJson(e)).toList();
+
+          if (parsedList.isNotEmpty && mounted) {
+            setState(() {
+              _allGames = parsedList;
+              _applyFilters();
+              _isLoading = false;
+            });
+            return;
+          }
         }
-        return;
+      } catch (e) {
+        debugPrint('[RETROPLAY API FETCH ATTEMPT $attempt ERROR]: $e');
+        if (attempt < retries && mounted) {
+          setState(() {
+            _statusMessage = 'Acordando servidor... (Tentativa $attempt/$retries)';
+          });
+          await Future.delayed(const Duration(seconds: 3));
+        }
       }
-    } catch (e) {
-      debugPrint('[RETROPLAY API FETCH ERROR]: $e');
     }
 
-    // Fallback Offline Catalog
+    // Fallback Catalog
     if (mounted) {
       setState(() {
         _allGames = const [
@@ -132,8 +149,10 @@ class _HomeScreenState extends State<HomeScreen> {
             fullTitle: '25th Anniversary Super Mario Bros. (Europe)',
             system: 'NES',
             ejsCore: 'nes',
-            demoRomUrl: 'https://pub-9cc5ba1ca4464cfea78f3f53ccebd465.r2.dev/NES/ROMS/25th%20Anniversary%20Super%20Mario%20Bros.%20(Europe).nes',
-            coverUrl: 'https://pub-9cc5ba1ca4464cfea78f3f53ccebd465.r2.dev/NES/CAPAS/25th%20Anniversary%20Super%20Mario%20Bros.%20(Europe).png',
+            demoRomUrl:
+                'https://pub-9cc5ba1ca4464cfea78f3f53ccebd465.r2.dev/NES/ROMS/25th%20Anniversary%20Super%20Mario%20Bros.%20(Europe).nes',
+            coverUrl:
+                'https://pub-9cc5ba1ca4464cfea78f3f53ccebd465.r2.dev/NES/CAPAS/25th%20Anniversary%20Super%20Mario%20Bros.%20(Europe).png',
           ),
           GameModel(
             id: 'snes-mario-world',
@@ -141,7 +160,8 @@ class _HomeScreenState extends State<HomeScreen> {
             fullTitle: 'Super Mario World (USA)',
             system: 'SNES',
             ejsCore: 'snes',
-            demoRomUrl: 'https://pub-9cc5ba1ca4464cfea78f3f53ccebd465.r2.dev/SNES/ROMS/Super%20Mario%20World.sfc',
+            demoRomUrl:
+                'https://pub-9cc5ba1ca4464cfea78f3f53ccebd465.r2.dev/SNES/ROMS/Super%20Mario%20World.sfc',
             coverUrl: '',
           ),
           GameModel(
@@ -150,8 +170,10 @@ class _HomeScreenState extends State<HomeScreen> {
             fullTitle: 'Aladdin (USA)',
             system: 'MEGADRIVE',
             ejsCore: 'segaMD',
-            demoRomUrl: 'https://pub-9cc5ba1ca4464cfea78f3f53ccebd465.r2.dev/MEGA/ROMS/Aladdin%20(USA).md',
-            coverUrl: 'https://pub-9cc5ba1ca4464cfea78f3f53ccebd465.r2.dev/MEGA/CAPA/Aladdin.png',
+            demoRomUrl:
+                'https://pub-9cc5ba1ca4464cfea78f3f53ccebd465.r2.dev/MEGA/ROMS/Aladdin%20(USA).md',
+            coverUrl:
+                'https://pub-9cc5ba1ca4464cfea78f3f53ccebd465.r2.dev/MEGA/CAPA/Aladdin.png',
           ),
           GameModel(
             id: 'ps2-black',
@@ -159,7 +181,8 @@ class _HomeScreenState extends State<HomeScreen> {
             fullTitle: 'Black (USA)',
             system: 'PS2',
             ejsCore: 'play',
-            demoRomUrl: 'https://pub-9cc5ba1ca4464cfea78f3f53ccebd465.r2.dev/PS2/ROMS/Black.iso',
+            demoRomUrl:
+                'https://pub-9cc5ba1ca4464cfea78f3f53ccebd465.r2.dev/PS2/ROMS/Black%20(USA).chd',
             coverUrl: '',
           ),
         ];
@@ -172,8 +195,9 @@ class _HomeScreenState extends State<HomeScreen> {
   void _applyFilters() {
     setState(() {
       _filteredGames = _allGames.where((game) {
-        final matchesSystem = _selectedSystem == 'ALL' || game.system == _selectedSystem;
-        final matchesSearch = _searchQuery.isEmpty || 
+        final matchesSystem =
+            _selectedSystem == 'ALL' || game.system == _selectedSystem;
+        final matchesSearch = _searchQuery.isEmpty ||
             game.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
             game.fullTitle.toLowerCase().contains(_searchQuery.toLowerCase());
         return matchesSystem && matchesSearch;
@@ -185,7 +209,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _selectedSystem = system;
     _applyFilters();
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -202,11 +225,17 @@ class _HomeScreenState extends State<HomeScreen> {
               child: const Icon(Icons.sports_esports, color: Colors.black, size: 20),
             ),
             const SizedBox(width: 10),
-            const Text('RETROPLAY CLOUD R2', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            const Text('RETROPLAY CLOUD R2',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           ],
         ),
         backgroundColor: const Color(0xFF141024),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded, color: Color(0xFF00F0FF)),
+            tooltip: 'Recarregar Catálogo',
+            onPressed: _fetchGamesCatalog,
+          ),
           Container(
             margin: const EdgeInsets.only(right: 16),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -219,7 +248,9 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 const Icon(Icons.cloud_done_rounded, color: Color(0xFF00F0FF), size: 16),
                 const SizedBox(width: 6),
-                Text('${_filteredGames.length} Jogos', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                Text('${_filteredGames.length} Jogos',
+                    style: const TextStyle(
+                        color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
               ],
             ),
           )
@@ -273,13 +304,23 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-
-
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator(color: Color(0xFF00F0FF)))
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const CircularProgressIndicator(color: Color(0xFF00F0FF)),
+                        const SizedBox(height: 16),
+                        Text(_statusMessage,
+                            style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                      ],
+                    ),
+                  )
                 : _filteredGames.isEmpty
-                    ? const Center(child: Text('Nenhum jogo encontrado.', style: TextStyle(color: Colors.white54)))
+                    ? const Center(
+                        child: Text('Nenhum jogo encontrado.',
+                            style: TextStyle(color: Colors.white54)))
                     : Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: GridView.builder(
@@ -306,7 +347,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final bool isSelected = _selectedSystem == systemCode;
     return ChoiceChip(
       showCheckmark: false,
-      avatar: Icon(icon, size: 16, color: isSelected ? Colors.black : const Color(0xFF00F0FF)),
+      avatar: Icon(icon,
+          size: 16, color: isSelected ? Colors.black : const Color(0xFF00F0FF)),
       label: Text(
         label,
         style: TextStyle(
@@ -352,7 +394,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     ? Image.network(
                         proxiedCoverUrl,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => _buildFallbackCardHeader(game),
+                        errorBuilder: (context, error, stackTrace) =>
+                            _buildFallbackCardHeader(game),
                       )
                     : _buildFallbackCardHeader(game),
                 Positioned(
@@ -363,11 +406,15 @@ class _HomeScreenState extends State<HomeScreen> {
                     decoration: BoxDecoration(
                       color: Colors.black87,
                       borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: const Color(0xFF00F0FF).withOpacity(0.6)),
+                      border: Border.all(
+                          color: const Color(0xFF00F0FF).withOpacity(0.6)),
                     ),
                     child: Text(
                       game.system,
-                      style: const TextStyle(color: Color(0xFF00F0FF), fontSize: 10, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                          color: Color(0xFF00F0FF),
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),
@@ -383,27 +430,51 @@ class _HomeScreenState extends State<HomeScreen> {
                   game.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: Colors.white),
                 ),
                 const SizedBox(height: 6),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF00F0FF),
-                      foregroundColor: Colors.black,
+                      backgroundColor: game.system == 'PS2'
+                          ? const Color(0xFFFF007F)
+                          : const Color(0xFF00F0FF),
+                      foregroundColor: game.system == 'PS2'
+                          ? Colors.white
+                          : Colors.black,
                       padding: const EdgeInsets.symmetric(vertical: 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
                     ),
-                    icon: const Icon(Icons.play_arrow_rounded, size: 18),
-                    label: const Text('JOGAR', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                    icon: Icon(
+                        game.system == 'PS2'
+                            ? Icons.download_for_offline_rounded
+                            : Icons.play_arrow_rounded,
+                        size: 18),
+                    label: Text(
+                        game.system == 'PS2' ? 'JOGAR PS2' : 'JOGAR',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 12)),
                     onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => EmulatorScreen(game: game),
-                        ),
-                      );
+                      if (game.system == 'PS2') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => PS2GameLauncherScreen(game: game),
+                          ),
+                        );
+                      } else {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => EmulatorScreen(game: game),
+                          ),
+                        );
+                      }
                     },
                   ),
                 )
@@ -422,13 +493,24 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.sports_esports_rounded, color: Color(0xFF00F0FF), size: 38),
+            Icon(
+              game.system == 'PS2'
+                  ? Icons.videogame_asset_rounded
+                  : Icons.sports_esports_rounded,
+              color: game.system == 'PS2'
+                  ? const Color(0xFFFF007F)
+                  : const Color(0xFF00F0FF),
+              size: 38,
+            ),
             const SizedBox(height: 6),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
               child: Text(
                 game.system,
-                style: const TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                    color: Colors.white54,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold),
               ),
             ),
           ],
@@ -438,557 +520,273 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-
-/// Emulator Gameplay View supporting touch controls, save/load states, and hardware checks
+/// Cross-Platform Emulator Screen (Web & Android WebView Execution)
 class EmulatorScreen extends StatefulWidget {
   final GameModel game;
-  final bool isVipUser;
 
-  const EmulatorScreen({
-    super.key,
-    required this.game,
-    this.isVipUser = false,
-  });
+  const EmulatorScreen({super.key, required this.game});
 
   @override
   State<EmulatorScreen> createState() => _EmulatorScreenState();
 }
 
-class _EmulatorScreenState extends State<EmulatorScreen> with WidgetsBindingObserver {
-  bool _isPaused = false;
-  bool _isGamepadConnected = false;
-  int _freeTimeSeconds = 7200; // 2 hours initial limit
-  Timer? _sessionTimer;
-  DateTime? _timeWhenPaused;
-
-  final List<String?> _saveSlots = ['Slot 1: World 1-2 (12:40)', null, null];
+class _EmulatorScreenState extends State<EmulatorScreen> {
+  WebViewController? _webViewController;
+  bool _isLoadingGame = true;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _startSessionTimer();
+    _initWebViewEngine();
   }
 
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    _sessionTimer?.cancel();
-    super.dispose();
-  }
+  void _initWebViewEngine() {
+    final String proxiedRomUrl =
+        '$kApiBaseUrl/proxy-rom/game.rom?url=${Uri.encodeComponent(widget.game.demoRomUrl)}';
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused) {
-      _timeWhenPaused = DateTime.now();
-      setState(() => _isPaused = true);
-    } else if (state == AppLifecycleState.resumed) {
-      if (_timeWhenPaused != null) {
-        final minutesAway = DateTime.now().difference(_timeWhenPaused!).inMinutes;
-        if (minutesAway >= 10) {
-          _closeSessionDueToInactivity();
-          return;
-        }
-      }
-      setState(() => _isPaused = false);
-    }
-  }
+    final String htmlContent = '''
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background-color: #000; overflow: hidden; }
+        #emulator { width: 100%; height: 100%; }
+    </style>
+</head>
+<body>
+    <div id="emulator"></div>
+    <script>
+        EJS_player = '#emulator';
+        EJS_core = '${widget.game.ejsCore}';
+        EJS_gameName = '${widget.game.title.replaceAll("'", "\\'")}';
+        EJS_color = '#00F0FF';
+        EJS_startOnLoaded = true;
+        EJS_patreonUrl = '';
+        EJS_gameUrl = '$proxiedRomUrl';
+    </script>
+    <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
+</body>
+</html>
+''';
 
-  void _startSessionTimer() {
-    _sessionTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_freeTimeSeconds > 0 && !_isPaused) {
-        if (mounted) setState(() => _freeTimeSeconds--);
-      } else if (_freeTimeSeconds == 0) {
-        _timerExpiredDialog();
-        timer.cancel();
-      }
-    });
-  }
-
-  void _closeSessionDueToInactivity() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF141024),
-        title: const Text('Sessão Encerrada por Inatividade', style: TextStyle(color: Colors.white)),
-        content: const Text(
-          'Você ficou mais de 10 minutos fora do app. Seu progresso foi salvo e seu tempo diário permaneceu congelado!',
-          style: TextStyle(color: Color(0xFFA09CB0)),
-        ),
-        actions: [
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00F0FF)),
-            onPressed: () {
-              Navigator.pop(ctx);
-              setState(() => _isPaused = false);
-            },
-            child: const Text('Continuar Jogando', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _timerExpiredDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF141024),
-        title: const Text('Tempo Gratuito Esgotado!', style: TextStyle(color: Colors.white)),
-        content: const Text(
-          'Você atingiu o limite de 2h hoje. Assista a um vídeo para ganhar +20 min (Máx 3x) ou torne-se VIP Ilimitado.',
-          style: TextStyle(color: Color(0xFFA09CB0)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              setState(() => _freeTimeSeconds += 1200);
-            },
-            child: const Text('Assistir Anúncio (+20 min)', style: TextStyle(color: Color(0xFF00F0FF))),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF007F)),
-            onPressed: () {
-              Navigator.pop(ctx);
-            },
-            child: const Text('Seja VIP', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-  }
-
-
-  void _openSaveLoadModal(bool isSaveMode) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF141024),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Container(
-              padding: const EdgeInsets.all(20),
-              height: 320,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        isSaveMode ? 'Salvar Progresso (Save State)' : 'Carregar Progresso (Load State)',
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white54),
-                        onPressed: () => Navigator.pop(ctx),
-                      )
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    widget.isVipUser
-                        ? 'VIP: Salvamento e carregamento instantâneos e ilimitados.'
-                        : 'Grátis: Limite de 3 Slots. Requer exibição de 1 anúncio curto.',
-                    style: TextStyle(color: widget.isVipUser ? const Color(0xFF00F0FF) : const Color(0xFFFF007F), fontSize: 12),
-                  ),
-                  const SizedBox(height: 15),
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: 3,
-                      itemBuilder: (context, index) {
-                        final slotData = _saveSlots[index];
-                        return Card(
-                          color: const Color(0xFF1A1530),
-                          margin: const EdgeInsets.only(bottom: 8),
-                          child: ListTile(
-                            leading: Icon(
-                              slotData != null ? Icons.save_rounded : Icons.add_to_photos_rounded,
-                              color: slotData != null ? const Color(0xFF00F0FF) : Colors.white24,
-                            ),
-                            title: Text(
-                              slotData ?? 'Slot ${index + 1} (Vazio)',
-                              style: TextStyle(color: slotData != null ? Colors.white : Colors.white38),
-                            ),
-                            trailing: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: isSaveMode ? const Color(0xFF00F0FF) : const Color(0xFFFF007F),
-                              ),
-                              onPressed: () {
-                                Navigator.pop(ctx);
-                                _executeSaveLoadAction(isSaveMode, index);
-                              },
-                              child: Text(
-                                isSaveMode ? 'Salvar' : 'Carregar',
-                                style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            );
+    _webViewController = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(const Color(0xFF000000))
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onPageFinished: (String url) {
+            if (mounted) {
+              setState(() => _isLoadingGame = false);
+            }
           },
-        );
-      },
-    );
-  }
-
-  void _executeSaveLoadAction(bool isSaveMode, int slotIndex) {
-    setState(() {
-      if (isSaveMode) {
-        _saveSlots[slotIndex] = 'Slot ${slotIndex + 1}: Salvo às ${_formatTime(DateTime.now())}';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Progresso salvo no Slot ${slotIndex + 1}!')),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Jogo carregado do Slot ${slotIndex + 1}!')),
-        );
-      }
-    });
-  }
-
-
-  void _openExitPauseDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF141024),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: Color(0xFF231C3D)),
         ),
-        title: const Text(
-          'JOGO PAUSADO',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        content: const Text(
-          'Escolha uma ação antes de retornar ao menu principal:',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: Color(0xFFA09CB0), fontSize: 13),
-        ),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00F0FF),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-              icon: const Icon(Icons.save_rounded, color: Colors.black, size: 18),
-              label: const Text(
-                'SALVAR PROGRESSO E SAIR',
-                style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 12),
-              ),
-              onPressed: () {
-                Navigator.pop(ctx);
-                _executeExitAction(saved: true);
-              },
-            ),
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Color(0xFFFF007F)),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-              icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFFF007F), size: 18),
-              label: const Text(
-                'SAIR SEM SALVAR (Perder Progresso)',
-                style: TextStyle(color: Color(0xFFFF007F), fontWeight: FontWeight.bold, fontSize: 12),
-              ),
-              onPressed: () {
-                Navigator.pop(ctx);
-                _executeExitAction(saved: false);
-              },
-            ),
-          ),
-          const SizedBox(height: 8),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Continuar Jogando', style: TextStyle(color: Colors.white70)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _executeExitAction({required bool saved}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: saved ? const Color(0xFF00F0FF) : const Color(0xFFFF007F),
-        content: Text(
-          saved ? 'Progresso salvo! Retornando...' : 'Saindo do jogo sem salvar...',
-          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-        ),
-      ),
-    );
-    Navigator.pop(context);
-  }
-
-  String _formatTime(DateTime dt) {
-    return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-  }
-
-  String _formatTimerSeconds(int totalSeconds) {
-    int minutes = totalSeconds ~/ 60;
-    int seconds = totalSeconds % 60;
-    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+      )
+      ..loadHtmlString(htmlContent, baseUrl: 'https://cdn.emulatorjs.org/');
   }
 
   @override
   Widget build(BuildContext context) {
-    if (widget.game.system == 'PS2') {
-      return _buildPS2NoticeScreen();
-    }
-
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          // Game Screen Simulation / Player Area
-          Center(
-            child: AspectRatio(
-              aspectRatio: 4 / 3,
-              child: Container(
-                color: const Color(0xFF0A0814),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.sports_esports_rounded, size: 70, color: Color(0xFF00F0FF)),
-                        const SizedBox(height: 12),
-                        Text(
-                          widget.game.title.toUpperCase(),
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'CONSOLE: ${widget.game.system} • 60 FPS',
-                          style: const TextStyle(color: Color(0xFFFF007F), letterSpacing: 1.5, fontSize: 12, fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
-                    if (_isPaused)
-                      Container(
-                        color: Colors.black87,
-                        child: const Center(
-                          child: Text('EMULAÇÃO PAUSADA', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // Top Overlay Bar
-          Positioned(
-            top: 10,
-            left: 20,
-            right: 20,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF141024).withOpacity(0.9),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFF00F0FF), width: 1),
-                  ),
-                  child: Row(
+      body: SafeArea(
+        child: Stack(
+          children: [
+            if (_webViewController != null)
+              WebViewWidget(controller: _webViewController!),
+            if (_isLoadingGame)
+              Container(
+                color: const Color(0xFF0F0C1B),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.timer_outlined, color: Color(0xFF00F0FF), size: 16),
-                      const SizedBox(width: 6),
+                      const CircularProgressIndicator(color: Color(0xFF00F0FF)),
+                      const SizedBox(height: 16),
                       Text(
-                        widget.isVipUser ? 'VIP ILIMITADO' : _formatTimerSeconds(_freeTimeSeconds),
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                        'Carregando ${widget.game.title}...',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Console: ${widget.game.system} • Servidor Cloud R2',
+                        style: const TextStyle(
+                            color: Color(0xFF00F0FF), fontSize: 12),
                       ),
                     ],
                   ),
                 ),
-                Row(
-                  children: [
-                    IconButton(
-                      icon: Icon(
-                        _isGamepadConnected ? Icons.sports_esports : Icons.sports_esports_outlined,
-                        color: _isGamepadConnected ? const Color(0xFF00F0FF) : Colors.white38,
-                      ),
-                      tooltip: 'Simular Controle Bluetooth',
-                      onPressed: () {
-                        setState(() => _isGamepadConnected = !_isGamepadConnected);
-                      },
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF141024),
-                        side: const BorderSide(color: Color(0xFF00F0FF)),
-                      ),
-                      icon: const Icon(Icons.save_rounded, color: Color(0xFF00F0FF), size: 16),
-                      label: const Text('Salvar', style: TextStyle(color: Colors.white, fontSize: 12)),
-                      onPressed: () => _openSaveLoadModal(true),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF141024),
-                        side: const BorderSide(color: Color(0xFFFF007F)),
-                      ),
-                      icon: const Icon(Icons.file_upload_rounded, color: Color(0xFFFF007F), size: 16),
-                      label: const Text('Carregar', style: TextStyle(color: Colors.white, fontSize: 12)),
-                      onPressed: () => _openSaveLoadModal(false),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF330818),
-                        side: const BorderSide(color: Colors.redAccent),
-                      ),
-                      icon: const Icon(Icons.power_settings_new_rounded, color: Colors.redAccent, size: 16),
-                      label: const Text('Sair', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-                      onPressed: _openExitPauseDialog,
-                    ),
-                  ],
+              ),
+            Positioned(
+              top: 10,
+              right: 10,
+              child: CircleAvatar(
+                backgroundColor: Colors.black87,
+                child: IconButton(
+                  icon: const Icon(Icons.close_rounded, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
                 ),
-              ],
-            ),
-          ),
-
-
-          // Touch Gamepad Overlay
-          if (!_isGamepadConnected) ...[
-            Positioned(
-              bottom: 25,
-              left: 25,
-              child: _buildVirtualDPad(),
-            ),
-            Positioned(
-              bottom: 25,
-              right: 25,
-              child: _buildActionButtons(),
-            ),
-            Positioned(
-              bottom: 15,
-              left: MediaQuery.of(context).size.width / 2 - 70,
-              child: Row(
-                children: [
-                  _buildPillButton('SELECT'),
-                  const SizedBox(width: 15),
-                  _buildPillButton('START'),
-                ],
               ),
             ),
           ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildVirtualDPad() {
-    return Container(
-      width: 130,
-      height: 130,
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.08),
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white24, width: 1.5),
-      ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Positioned(top: 4, child: _dPadArrow(Icons.arrow_drop_up_rounded)),
-          Positioned(bottom: 4, child: _dPadArrow(Icons.arrow_drop_down_rounded)),
-          Positioned(left: 4, child: _dPadArrow(Icons.arrow_left_rounded)),
-          Positioned(right: 4, child: _dPadArrow(Icons.arrow_right_rounded)),
-        ],
-      ),
-    );
-  }
-
-  Widget _dPadArrow(IconData icon) {
-    return InkWell(
-      onTap: () {},
-      child: Icon(icon, size: 38, color: Colors.white70),
-    );
-  }
-
-  Widget _buildActionButtons() {
-    return SizedBox(
-      width: 140,
-      height: 140,
-      child: Stack(
-        children: [
-          Positioned(top: 0, left: 46, child: _actionCircleButton('Y', const Color(0xFF00F0FF))),
-          Positioned(bottom: 0, left: 46, child: _actionCircleButton('A', const Color(0xFFFF007F))),
-          Positioned(left: 0, top: 46, child: _actionCircleButton('X', const Color(0xFF00FF88))),
-          Positioned(right: 0, top: 46, child: _actionCircleButton('B', const Color(0xFFFF9900))),
-        ],
-      ),
-    );
-  }
-
-  Widget _actionCircleButton(String label, Color color) {
-    return GestureDetector(
-      onTapDown: (_) {},
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.25),
-          shape: BoxShape.circle,
-          border: Border.all(color: color, width: 2),
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 16),
-          ),
         ),
       ),
     );
   }
+}
 
-  Widget _buildPillButton(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white12,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white30),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold),
-      ),
-    );
+/// PS2 Launcher Screen - Native Intent Support (Android) & Download Center (Web)
+class PS2GameLauncherScreen extends StatefulWidget {
+  final GameModel game;
+
+  const PS2GameLauncherScreen({super.key, required this.game});
+
+  @override
+  State<PS2GameLauncherScreen> createState() => _PS2GameLauncherScreenState();
+}
+
+class _PS2GameLauncherScreenState extends State<PS2GameLauncherScreen> {
+  bool _isDownloading = false;
+  bool _isDownloaded = false;
+  double _downloadProgress = 0.0;
+  String _statusText = 'Pronto para baixar a ROM para o dispositivo.';
+  String? _localFilePath;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkLocalFileExists();
   }
 
-  Widget _buildPS2NoticeScreen() {
+  Future<void> _checkLocalFileExists() async {
+    if (kIsWeb) return;
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final fileName = widget.game.demoRomUrl.split('/').last.split('?').first;
+      final file = File('${dir.path}/$fileName');
+
+      if (await file.exists()) {
+        final sizeMb = (await file.length()) / (1024 * 1024);
+        setState(() {
+          _isDownloaded = true;
+          _localFilePath = file.path;
+          _statusText =
+              'ROM já disponível no dispositivo (${sizeMb.toStringAsFixed(1)} MB)';
+        });
+      }
+    } catch (e) {
+      debugPrint('[PS2 CHECK FILE ERROR]: $e');
+    }
+  }
+
+  Future<void> _downloadRomToDevice() async {
+    if (kIsWeb) {
+      final url = Uri.parse(widget.game.demoRomUrl);
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      }
+      return;
+    }
+
+    setState(() {
+      _isDownloading = true;
+      _downloadProgress = 0.0;
+      _statusText = 'Conectando ao Cloudflare R2...';
+    });
+
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final fileName = widget.game.demoRomUrl.split('/').last.split('?').first;
+      final savePath = '${dir.path}/$fileName';
+      final file = File(savePath);
+
+      final proxiedUrl =
+          '$kApiBaseUrl/proxy-rom/game.rom?url=${Uri.encodeComponent(widget.game.demoRomUrl)}';
+      final request = http.Request('GET', Uri.parse(proxiedUrl));
+      final response = await http.Client().send(request);
+
+      final totalBytes = response.contentLength ?? 0;
+      int receivedBytes = 0;
+
+      final sink = file.openWrite();
+
+      await response.stream.forEach((chunk) {
+        sink.add(chunk);
+        receivedBytes += chunk.length;
+        if (mounted && totalBytes > 0) {
+          setState(() {
+            _downloadProgress = receivedBytes / totalBytes;
+            final recMb = (receivedBytes / (1024 * 1024)).toStringAsFixed(1);
+            final totMb = (totalBytes / (1024 * 1024)).toStringAsFixed(1);
+            _statusText = 'Baixando: $recMb MB / $totMb MB';
+          });
+        }
+      });
+
+      await sink.close();
+
+      if (mounted) {
+        setState(() {
+          _isDownloading = false;
+          _isDownloaded = true;
+          _localFilePath = savePath;
+          _statusText = 'ROM salva no armazenamento com sucesso!';
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isDownloading = false;
+          _statusText = 'Erro no download: $e';
+        });
+      }
+    }
+  }
+
+  Future<void> _launchNativePS2Emulator() async {
+    if (_localFilePath == null) return;
+
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      try {
+        final intent = AndroidIntent(
+          action: 'android.intent.action.VIEW',
+          data: Uri.file(_localFilePath!).toString(),
+          type: 'application/octet-stream',
+        );
+        await intent.launch();
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  'Abra o NetherSX2/AetherSX2 e selecione a ROM em: $_localFilePath'),
+              duration: const Duration(seconds: 6),
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _openNetherSX2Download() async {
+    final url = Uri.parse(
+        'https://github.com/Trixarian/NetherSX2-builder/releases');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0F0C1B),
       appBar: AppBar(
         backgroundColor: const Color(0xFF141024),
-        title: Text(widget.game.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        title: Text(widget.game.title,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
           onPressed: () => Navigator.pop(context),
@@ -996,13 +794,14 @@ class _EmulatorScreenState extends State<EmulatorScreen> with WidgetsBindingObse
       ),
       body: Center(
         child: Container(
-          constraints: const BoxConstraints(maxWidth: 500),
-          margin: const EdgeInsets.all(24),
-          padding: const EdgeInsets.all(28),
+          constraints: const BoxConstraints(maxWidth: 520),
+          margin: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             color: const Color(0xFF141024),
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: const Color(0xFFFF007F).withOpacity(0.6), width: 1.5),
+            border: Border.all(
+                color: const Color(0xFFFF007F).withOpacity(0.6), width: 1.5),
             boxShadow: [
               BoxShadow(
                 color: const Color(0xFFFF007F).withOpacity(0.15),
@@ -1020,54 +819,121 @@ class _EmulatorScreenState extends State<EmulatorScreen> with WidgetsBindingObse
                   color: const Color(0xFFFF007F).withOpacity(0.15),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.videogame_asset_rounded, color: Color(0xFFFF007F), size: 48),
+                child: const Icon(Icons.videogame_asset_rounded,
+                    color: Color(0xFFFF007F), size: 44),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               Text(
                 widget.game.title,
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                style: const TextStyle(
+                    fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
                   color: const Color(0xFF00F0FF).withOpacity(0.15),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF00F0FF).withOpacity(0.4)),
+                  border: Border.all(
+                      color: const Color(0xFF00F0FF).withOpacity(0.4)),
                 ),
-                child: const Text(
-                  'PLAYSTATION 2 - REQUISITOS DE HARDWARE',
-                  style: TextStyle(color: Color(0xFF00F0FF), fontSize: 11, fontWeight: FontWeight.bold),
+                child: Text(
+                  kIsWeb
+                      ? 'PLAYSTATION 2 • DOWNLOAD DA ROM'
+                      : 'PLAYSTATION 2 • EXECUÇÃO NATIVA ANDROID',
+                  style: const TextStyle(
+                      color: Color(0xFF00F0FF),
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold),
                 ),
               ),
-              const SizedBox(height: 20),
-              const Text(
-                'A emulação de PlayStation 2 exige processamento gráfico 3D avançado e suporte nativo ao sistema operacional.',
+              const SizedBox(height: 16),
+              Text(
+                _statusText,
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
+                style: const TextStyle(
+                    color: Colors.white70, fontSize: 13, height: 1.4),
               ),
-              const SizedBox(height: 12),
-              const Text(
-                'Para executar este jogo no celular ou Smart TV sem travamentos, utilize o nosso cliente dedicado no APK Android.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white38, fontSize: 12, height: 1.5),
-              ),
-              const SizedBox(height: 28),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF00F0FF),
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              const SizedBox(height: 16),
+              if (_isDownloading) ...[
+                LinearProgressIndicator(
+                  value: _downloadProgress > 0 ? _downloadProgress : null,
+                  backgroundColor: const Color(0xFF0F0C1B),
+                  color: const Color(0xFF00F0FF),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${(_downloadProgress * 100).toStringAsFixed(0)}%',
+                  style: const TextStyle(
+                      color: Color(0xFF00F0FF),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14),
+                ),
+                const SizedBox(height: 16),
+              ],
+              if (!_isDownloaded && !_isDownloading)
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF00F0FF),
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                    ),
+                    icon: const Icon(Icons.cloud_download_rounded, size: 20),
+                    label: Text(
+                        kIsWeb
+                            ? 'BAIXAR ROM DIRETO (NAVEGADOR)'
+                            : 'BAIXAR ROM DO CLOUDFLARE R2',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 13)),
+                    onPressed: _downloadRomToDevice,
                   ),
-                  icon: const Icon(Icons.arrow_back_rounded, size: 18),
-                  label: const Text('VOLTAR AO CATÁLOGO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                  onPressed: () => Navigator.pop(context),
                 ),
-              ),
+              if (_isDownloaded && !_isDownloading) ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFF007F),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                    ),
+                    icon: const Icon(Icons.play_arrow_rounded, size: 22),
+                    label: const Text('EXECUTAR NO NETHERSX2 / AETHERSX2',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 13)),
+                    onPressed: _launchNativePS2Emulator,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(
+                          color: const Color(0xFF00F0FF).withOpacity(0.6)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                    ),
+                    icon: const Icon(Icons.get_app_rounded,
+                        color: Color(0xFF00F0FF), size: 18),
+                    label: const Text('BAIXAR EMULADOR NETHERSX2 (APK)',
+                        style: TextStyle(
+                            color: Color(0xFF00F0FF),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12)),
+                    onPressed: _openNetherSX2Download,
+                  ),
+                ),
+              ],
             ],
           ),
         ),
