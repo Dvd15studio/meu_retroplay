@@ -563,6 +563,7 @@ class _EmulatorScreenState extends State<EmulatorScreen> {
         key: function(i) { return Object.keys(this._data)[i] || null; },
         get length() { return Object.keys(this._data).length; }
       };
+
       try {
         var test = '__test__';
         window.localStorage.setItem(test, test);
@@ -576,6 +577,42 @@ class _EmulatorScreenState extends State<EmulatorScreen> {
         } catch (e2) {
           try { window.localStorage = dummyStorage; } catch (e3) {}
         }
+      }
+
+      try {
+        if (!window.indexedDB) {
+          window.indexedDB = {
+            open: function() {
+              return {
+                addEventListener: function() {},
+                removeEventListener: function() {},
+                result: {},
+                onupgradeneeded: null,
+                onsuccess: null,
+                onerror: null
+              };
+            }
+          };
+        }
+      } catch (eDB) {
+        try {
+          Object.defineProperty(window, 'indexedDB', {
+            value: {
+              open: function() {
+                return {
+                  addEventListener: function() {},
+                  removeEventListener: function() {},
+                  result: {},
+                  onupgradeneeded: null,
+                  onsuccess: null,
+                  onerror: null
+                };
+              }
+            },
+            configurable: true,
+            writable: true
+          });
+        } catch (eDB2) {}
       }
     })();
   </script>
