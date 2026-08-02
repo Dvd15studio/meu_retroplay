@@ -10,7 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:android_intent_plus/android_intent.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-/// Backend API Endpoint
+/// Endereço do servidor backend no Render
 const String kApiBaseUrl = 'https://retroplay-backend-t5z1.onrender.com/api';
 
 void main() {
@@ -25,7 +25,7 @@ void main() {
   runApp(const RetroPlayApp());
 }
 
-/// Main Application Widget
+/// Aplicativo Principal
 class RetroPlayApp extends StatelessWidget {
   const RetroPlayApp({super.key});
 
@@ -48,7 +48,7 @@ class RetroPlayApp extends StatelessWidget {
   }
 }
 
-/// Game Model
+/// Modelo de Dados do Jogo
 class GameModel {
   final String id;
   final String title;
@@ -129,7 +129,7 @@ class _HomeScreenState extends State<HomeScreen> {
           }
         }
       } catch (e) {
-        debugPrint('[RETROPLAY API FETCH ATTEMPT $attempt ERROR]: $e');
+        debugPrint('[ERRO API RETROPLAY TENTATIVA $attempt]: $e');
         if (attempt < retries && mounted) {
           setState(() {
             _statusMessage = 'Acordando servidor... (Tentativa $attempt/$retries)';
@@ -139,7 +139,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
 
-    // Fallback Catalog
+    // Catálogo de Emergência caso o servidor falhe
     if (mounted) {
       setState(() {
         _allGames = const [
@@ -520,7 +520,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-/// Cross-Platform Emulator Screen (Web & Android WebView Execution)
+/// Tela do Emulador Universal (Web e Android APK)
 class EmulatorScreen extends StatefulWidget {
   final GameModel game;
 
@@ -635,7 +635,7 @@ class _EmulatorScreenState extends State<EmulatorScreen> {
   }
 }
 
-/// PS2 Launcher Screen - Native Intent Support (Android) & Download Center (Web)
+/// Tela do PS2 - Suporte Nativo (Android) e Baixador de ROM (Web)
 class PS2GameLauncherScreen extends StatefulWidget {
   final GameModel game;
 
@@ -677,7 +677,7 @@ class _PS2GameLauncherScreenState extends State<PS2GameLauncherScreen> {
         }
       }
     } catch (e) {
-      debugPrint('[PS2 CHECK FILE ERROR]: $e');
+      debugPrint('[ERRO PS2 VERIFICAR ARQUIVO]: $e');
     }
   }
 
