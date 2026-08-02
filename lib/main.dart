@@ -139,7 +139,6 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
 
-    // Catálogo de Emergência caso o servidor falhe
     if (mounted) {
       setState(() {
         _allGames = const [
@@ -568,19 +567,31 @@ class _EmulatorScreenState extends State<EmulatorScreen> {
 </html>
 ''';
 
-    _webViewController = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(const Color(0xFF000000))
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageFinished: (String url) {
-            if (mounted) {
-              setState(() => _isLoadingGame = false);
-            }
-          },
-        ),
-      )
-      ..loadHtmlString(htmlContent, baseUrl: 'https://cdn.emulatorjs.org/');
+    final controller = WebViewController();
+
+    if (!kIsWeb) {
+      controller
+        ..setJavaScriptMode(JavaScriptMode.unrestricted)
+        ..setBackgroundColor(const Color(0xFF000000))
+        ..setNavigationDelegate(
+          NavigationDelegate(
+            onPageFinished: (String url) {
+              if (mounted) {
+                setState(() => _isLoadingGame = false);
+              }
+            },
+          ),
+        );
+    } else {
+      Future.delayed(const Duration(milliseconds: 1500), () {
+        if (mounted) {
+          setState(() => _isLoadingGame = false);
+        }
+      });
+    }
+
+    controller.loadHtmlString(htmlContent, baseUrl: 'https://cdn.emulatorjs.org/');
+    _webViewController = controller;
   }
 
   @override
