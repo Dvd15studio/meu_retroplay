@@ -552,6 +552,33 @@ class _EmulatorScreenState extends State<EmulatorScreen> {
     body, html { margin: 0; padding: 0; width: 100%; height: 100%; background-color: #000; overflow: hidden; }
     #emulator { width: 100%; height: 100%; }
   </style>
+  <script>
+    (function() {
+      var dummyStorage = {
+        _data: {},
+        getItem: function(k) { return this._data.hasOwnProperty(k) ? this._data[k] : null; },
+        setItem: function(k, v) { this._data[k] = String(v); },
+        removeItem: function(k) { delete this._data[k]; },
+        clear: function() { this._data = {}; },
+        key: function(i) { return Object.keys(this._data)[i] || null; },
+        get length() { return Object.keys(this._data).length; }
+      };
+      try {
+        var test = '__test__';
+        window.localStorage.setItem(test, test);
+        window.localStorage.removeItem(test);
+      } catch (e) {
+        try {
+          Object.defineProperty(window, 'localStorage', {
+            get: function() { return dummyStorage; },
+            configurable: true
+          });
+        } catch (e2) {
+          try { window.localStorage = dummyStorage; } catch (e3) {}
+        }
+      }
+    })();
+  </script>
 </head>
 <body>
   <div id="emulator"></div>
