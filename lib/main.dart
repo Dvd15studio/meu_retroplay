@@ -71,12 +71,25 @@ class GameModel {
   });
 
   factory GameModel.fromJson(Map<String, dynamic> json) {
+    final sys = (json['system'] ?? 'NES').toString().toUpperCase();
+    var core = (json['ejsCore'] ?? 'nes').toString();
+
+    if (sys == 'PS1' || core == 'psx' || core == 'play') {
+      core = 'pcsx_rearmed';
+    } else if (sys == 'SNES') {
+      core = 'snes';
+    } else if (sys == 'MEGADRIVE' || sys == 'MEGA') {
+      core = 'segaMD';
+    } else if (sys == 'NES') {
+      core = 'nes';
+    }
+
     return GameModel(
       id: json['id'] ?? '',
       title: json['title'] ?? 'Jogo Sem Título',
       fullTitle: json['fullTitle'] ?? json['title'] ?? '',
-      system: json['system'] ?? 'NES',
-      ejsCore: json['ejsCore'] ?? 'nes',
+      system: sys,
+      ejsCore: core,
       demoRomUrl: json['demoRomUrl'] ?? json['romUrl'] ?? '',
       coverUrl: json['coverUrl'] ?? '',
     );
@@ -521,7 +534,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-/// Tela do Emulador Universal (Suporte Duplo Nativo para Web e Android)
+/// Tela do Emulador Universal com Barra de Controle Superior
 class EmulatorScreen extends StatefulWidget {
   final GameModel game;
 
@@ -612,6 +625,26 @@ class _EmulatorScreenState extends State<EmulatorScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF141024),
+        elevation: 4,
+        title: Text(
+          widget.game.title,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF00F0FF)),
+          tooltip: 'Sair do Jogo',
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.close_rounded, color: Colors.redAccent),
+            tooltip: 'Fechar Emulador',
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Stack(
           children: [
@@ -644,26 +677,6 @@ class _EmulatorScreenState extends State<EmulatorScreen> {
                   ),
                 ),
               ),
-            Positioned(
-              top: 16,
-              right: 16,
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () => Navigator.of(context).pop(),
-                  borderRadius: BorderRadius.circular(30),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.8),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFF00F0FF), width: 1.5),
-                    ),
-                    child: const Icon(Icons.close_rounded, color: Colors.white, size: 24),
-                  ),
-                ),
-              ),
-            ),
           ],
         ),
       ),
