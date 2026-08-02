@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:ui_web' as ui_web;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,6 +10,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:android_intent_plus/android_intent.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:web/web.dart' as web;
 
 /// Endereço do servidor backend no Render
 const String kApiBaseUrl = 'https://retroplay-backend-t5z1.onrender.com/api';
@@ -519,7 +521,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-/// Tela do Emulador Universal (Web e Android APK)
+/// Tela do Emulador Universal (Suporte Duplo Nativo para Web e Android)
 class EmulatorScreen extends StatefulWidget {
   final GameModel game;
 
@@ -530,16 +532,17 @@ class EmulatorScreen extends StatefulWidget {
 }
 
 class _EmulatorScreenState extends State<EmulatorScreen> {
-  WebViewController? _webViewController;
+  WebViewController? _androidWebViewController;
+  String? _webIframeViewType;
   bool _isLoadingGame = true;
 
   @override
   void initState() {
     super.initState();
-    _initWebViewEngine();
+    _initEngine();
   }
 
-  void _initWebViewEngine() {
+  void _initEngine() {
     final String proxiedRomUrl =
         '$kApiBaseUrl/proxy-rom/game.rom?url=${Uri.encodeComponent(widget.game.demoRomUrl)}';
 
@@ -547,75 +550,12 @@ class _EmulatorScreenState extends State<EmulatorScreen> {
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <style>
     body, html { margin: 0; padding: 0; width: 100%; height: 100%; background-color: #000; overflow: hidden; }
     #emulator { width: 100%; height: 100%; }
   </style>
-  <script>
-    (function() {
-      var dummyStorage = {
-        _data: {},
-        getItem: function(k) { return this._data.hasOwnProperty(k) ? this._data[k] : null; },
-        setItem: function(k, v) { this._data[k] = String(v); },
-        removeItem: function(k) { delete this._data[k]; },
-        clear: function() { this._data = {}; },
-        key: function(i) { return Object.keys(this._data)[i] || null; },
-        get length() { return Object.keys(this._data).length; }
-      };
-
-      try {
-        var test = '__test__';
-        window.localStorage.setItem(test, test);
-        window.localStorage.removeItem(test);
-      } catch (e) {
-        try {
-          Object.defineProperty(window, 'localStorage', {
-            get: function() { return dummyStorage; },
-            configurable: true
-          });
-        } catch (e2) {
-          try { window.localStorage = dummyStorage; } catch (e3) {}
-        }
-      }
-
-      try {
-        if (!window.indexedDB) {
-          window.indexedDB = {
-            open: function() {
-              return {
-                addEventListener: function() {},
-                removeEventListener: function() {},
-                result: {},
-                onupgradeneeded: null,
-                onsuccess: null,
-                onerror: null
-              };
-            }
-          };
-        }
-      } catch (eDB) {
-        try {
-          Object.defineProperty(window, 'indexedDB', {
-            value: {
-              open: function() {
-                return {
-                  addEventListener: function() {},
-                  removeEventListener: function() {},
-                  result: {},
-                  onupgradeneeded: null,
-                  onsuccess: null,
-                  onerror: null
-                };
-              }
-            },
-            configurable: true,
-            writable: true
-          });
-        } catch (eDB2) {}
-      }
-    })();
-  </script>
 </head>
 <body>
   <div id="emulator"></div>
@@ -631,31 +571,41 @@ class _EmulatorScreenState extends State<EmulatorScreen> {
 </html>
 ''';
 
-    final controller = WebViewController();
+    if (kIsWeb) {
+      final viewType = 'emulator-iframe-${widget.game.id}-${DateTime.now().millisecondsSinceEpoch}';
+      
+      ui_web.platformViewRegistry.registerViewFactory(viewType, (int viewId) {
+        final iframe = web.document.createElement('iframe') as web.HTMLIFrameElement;
+        iframe.style.width = '100%';
+        iframe.style.height = '100%';
+        iframe.style.border = 'none';
+        iframe.setAttribute('allow', 'autoplay; gamepad; fullscreen; microphone; speaker');
+        iframe.setAttribute('srcdoc', htmlContent);
+        return iframe;
+      });
 
-    if (!kIsWeb) {
-      controller
+      setState(() {
+        _webIframeViewType = viewType;
+      });
+
+      Future.delayed(const Duration(milliseconds: 1500), () {
+        if (mounted) setState(() => _isLoadingGame = false);
+      });
+    } else {
+      final controller = WebViewController()
         ..setJavaScriptMode(JavaScriptMode.unrestricted)
         ..setBackgroundColor(const Color(0xFF000000))
         ..setNavigationDelegate(
           NavigationDelegate(
             onPageFinished: (String url) {
-              if (mounted) {
-                setState(() => _isLoadingGame = false);
-              }
+              if (mounted) setState(() => _isLoadingGame = false);
             },
           ),
         );
-    } else {
-      Future.delayed(const Duration(milliseconds: 1500), () {
-        if (mounted) {
-          setState(() => _isLoadingGame = false);
-        }
-      });
-    }
 
-    controller.loadHtmlString(htmlContent, baseUrl: 'https://cdn.emulatorjs.org/');
-    _webViewController = controller;
+      controller.loadHtmlString(htmlContent, baseUrl: 'https://cdn.emulatorjs.org/');
+      _androidWebViewController = controller;
+    }
   }
 
   @override
@@ -665,8 +615,10 @@ class _EmulatorScreenState extends State<EmulatorScreen> {
       body: SafeArea(
         child: Stack(
           children: [
-            if (_webViewController != null)
-              WebViewWidget(controller: _webViewController!),
+            if (kIsWeb && _webIframeViewType != null)
+              HtmlElementView(viewType: _webIframeViewType!)
+            else if (!kIsWeb && _androidWebViewController != null)
+              WebViewWidget(controller: _androidWebViewController!),
             if (_isLoadingGame)
               Container(
                 color: const Color(0xFF0F0C1B),
@@ -693,13 +645,22 @@ class _EmulatorScreenState extends State<EmulatorScreen> {
                 ),
               ),
             Positioned(
-              top: 10,
-              right: 10,
-              child: CircleAvatar(
-                backgroundColor: Colors.black87,
-                child: IconButton(
-                  icon: const Icon(Icons.close_rounded, color: Colors.white),
-                  onPressed: () => Navigator.pop(context),
+              top: 16,
+              right: 16,
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => Navigator.of(context).pop(),
+                  borderRadius: BorderRadius.circular(30),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.8),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFF00F0FF), width: 1.5),
+                    ),
+                    child: const Icon(Icons.close_rounded, color: Colors.white, size: 24),
+                  ),
                 ),
               ),
             ),
